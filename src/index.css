@@ -1,0 +1,318 @@
+/* Archivo: src/index.css */
+
+/* --- 1. Importación de Fuentes (Parte 1) --- */
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Pacifico&display=swap');
+
+/* --- 2. Variables de Color (Parte 1) --- */
+:root {
+  --color-fondo: #FFF5E1;
+  --color-acento-rosa: #FFCOCB;
+  --color-acento-choco: #8B4113;
+  --color-texto-principal: #5D4037;
+  --color-texto-secundario: #B0BEC5;
+  --color-blanco: #FFFFFF;
+
+  --fuente-principal: 'Lato', sans-serif;
+  --fuente-encabezado: 'Pacifico', cursive;
+}
+
+/* --- 3. Estilos Globales (Adaptados) --- */
+body {
+  font-family: var(--fuente-principal);
+  color: var(--color-texto-principal);
+  background-color: var(--color-fondo);
+}
+
+/* --- 4. Estilos de Componentes Migrados --- */
+
+/* (Header) Clases de nuestro 'Header.tsx' */
+.main-header {
+  border-bottom: 2px solid var(--color-acento-choco);
+}
+
+.logo-text {
+  font-family: var(--fuente-encabezado);
+  font-size: 28px;
+  color: var(--color-texto-principal);
+}
+
+/* (Footer) Clases de nuestro 'Footer.tsx' */
+.main-footer {
+  background-color: var(--color-texto-principal);
+  color: var(--color-fondo);
+}
+
+.footer-copy {
+  color: var(--color-fondo);
+}
+
+.footer-social i {
+  font-size: 24px;
+  color: var(--color-blanco);
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.footer-social a:hover i {
+  opacity: 1;
+}
+
+/* --- 5. Estilos de Componentes Migrados (Home) --- */
+
+/* (Botones)
+   Sobreescribimos los colores de Bootstrap para usar 
+   nuestra paleta de "Forma C" [cite: 3141-3146]
+*/
+.btn-principal {
+  background-color: var(--color-acento-choco) !important;
+  border-color: var(--color-acento-choco) !important;
+  color: var(--color-blanco) !important;
+}
+.btn-principal:hover {
+  background-color: var(--color-texto-principal) !important;
+  border-color: var(--color-texto-principal) !important;
+}
+
+.btn-secundario {
+  border-color: var(--color-acento-choco) !important;
+  color: var(--color-acento-choco) !important;
+}
+.btn-secundario:hover {
+  background-color: var(--color-acento-choco) !important;
+  color: var(--color-blanco) !important;
+}
+
+/* (Tarjeta de Producto) */
+.product-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid var(--color-acento-rosa) !important;
+}
+.product-card:hover {
+  transform: scale(1.05); 
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); 
+}
+.product-card-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-top-left-radius: var(--bs-card-inner-border-radius);
+  border-top-right-radius: var(--bs-card-inner-border-radius);
+}
+.product-card .card-title a {
+  text-decoration: none;
+  color: inherit;
+}
+.card-stretched-link::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+}
+.product-card .btn-secundario {
+  position: relative;
+  z-index: 2;
+}
+
+/* (Misión y Visión) */
+.mission-box {
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-acento-rosa);
+  border-radius: var(--bs-border-radius);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  height: 100%; /* Para que ambas cajas tengan el mismo alto */
+}
+.mission-box h3 {
+  text-align: center;
+  margin-bottom: 15px;
+}
+.mission-box p {
+  line-height: 1.6;
+}
+
+/* --- 6. Estilos de Contenido (Nosotros, Blog, Perfil) --- */
+
+.content-container {
+  max-width: 800px; /* Ancho de lectura */
+  margin: 0 auto; /* Centrado */
+  padding: 30px;
+  background-color: var(--color-blanco); /* ¡El fondo blanco! */
+  border: 1px solid var(--color-acento-rosa);
+  border-radius: 8px; /* Usa la variable de Bootstrap si prefieres: var(--bs-border-radius) */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.content-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-family: var(--fuente-encabezado); /* Asegura la fuente del título */
+  color: var(--color-acento-choco);
+}
+.content-container p {
+  font-size: 16px;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+.content-divider {
+  border: none;
+  border-top: 1px solid var(--color-acento-rosa);
+  margin: 30px 0;
+}
+
+/* --- 7. Estilos de Blog --- */
+
+.blog-post-summary .blog-post-image {
+  /* Forzamos la altura en la tarjeta horizontal */
+  height: 250px; 
+  width: 100%;
+  object-fit: cover;
+  
+  /* Arregla los bordes redondeados en Bootstrap */
+  /* (Solo redondea las esquinas izquierdas) */
+  border-top-left-radius: var(--bs-card-inner-border-radius);
+  border-bottom-left-radius: var(--bs-card-inner-border-radius);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Portabilidad para el blog en móviles */
+@media (max-width: 767px) {
+  .blog-post-summary .blog-post-image {
+    /* En móvil, la tarjeta se apila, así que ajustamos los bordes */
+    height: 200px;
+    border-top-right-radius: var(--bs-card-inner-border-radius);
+    border-bottom-left-radius: 0;
+  }
+}
+
+/* --- 8. Estilos de Mapa (Contacto) --- */
+
+.map-container {
+  width: 100%;
+  border-radius: 8px; /* Redondea las esquinas */
+  overflow: hidden; /* Oculta los bordes del iframe */
+}
+
+.map-container iframe {
+  width: 100%; 
+  height: 400px;
+  display: block; /* Elimina espacios extra */
+}
+
+/* --- 9. Estilos de Tienda (Filtros) --- */
+
+.store-filters {
+  background-color: var(--color-blanco);
+  padding: 20px;
+  border: 1px solid var(--color-acento-rosa);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.filter-title {
+  font-family: var(--fuente-encabezado);
+  color: var(--color-acento-choco);
+  font-size: 22px;
+  border-bottom: 1px solid var(--color-acento-rosa);
+  padding-bottom: 5px;
+}
+
+.filter-search {
+  font-family: var(--fuente-principal);
+}
+
+/* Estilos para la lista de categorías */
+.list-group-item {
+  border: 1px solid var(--color-acento-rosa) !important;
+  color: var(--color-texto-principal) !important; /* <-- Texto Café */
+}
+.list-group-item.active {
+  background-color: var(--color-acento-choco) !important; /* <-- Fondo Café */
+  border-color: var(--color-acento-choco) !important;
+
+  color: var(--color-blanco) !important; /* Texto Blanco */
+}
+
+/* --- 10. Estilos de Página de Producto --- */
+
+/* (Layout) */
+.product-title {
+  font-family: var(--fuente-encabezado);
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+.product-price {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-acento-choco);
+  margin-bottom: 20px;
+  display: block;
+}
+.product-description {
+  font-size: 16px;
+  line-height: 1.7;
+  margin-bottom: 30px;
+}
+.input-quantity {
+  width: 80px !important; /* Hacemos el input de cantidad pequeño */
+}
+
+/* (Galería de Imágenes) */
+.gallery-main-image img {
+  width: 100%;
+  border: 1px solid var(--color-acento-rosa);
+  border-radius: 8px;
+}
+.gallery-thumbnails {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+.gallery-thumbnails .thumbnail {
+  width: 80px;
+  height: 80px;
+  border: 2px solid var(--color-texto-secundario);
+  border-radius: 5px;
+  cursor: pointer;
+  opacity: 0.7;
+  object-fit: cover; /* Recorta las miniaturas */
+}
+.gallery-thumbnails .thumbnail:hover,
+.gallery-thumbnails .thumbnail.active {
+  border-color: var(--color-acento-choco);
+  opacity: 1;
+}
+
+/* (Botones de Compartir) */
+.product-share {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-acento-rosa);
+}
+.share-title {
+  font-family: var(--fuente-principal);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--color-texto-principal);
+  margin-bottom: 15px;
+}
+.share-icons {
+  display: flex;
+  gap: 20px;
+}
+.share-link i {
+  font-size: 32px; 
+  color: var(--color-texto-principal);
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+.share-link:hover i {
+  opacity: 1;
+  transform: scale(1.1);
+}
+#share-fb:hover i { color: #1877F2; } 
+#share-tw:hover i { color: #1DA1F2; } 
+#share-wa:hover i { color: #25D366; }
