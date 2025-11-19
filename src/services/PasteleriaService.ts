@@ -9,7 +9,7 @@ export interface IProducto {
 }
 
 // 2. Le decimos a TypeScript que nuestro arreglo USA esa interfaz
-const productosDB: IProducto[] = [
+const datosIniciales: IProducto[] = [
   {
     codigo: "TC001",
     nombre: "Torta Cuadrada de Chocolate",
@@ -220,36 +220,186 @@ const productosDB: IProducto[] = [
     ]
   }
 ];
+// --- 3. LÓGICA DE PERSISTENCIA (El "Motor" del Admin) ---
 
-// --- 2. FUNCIONES "CRUD" (Por ahora, solo "Read") ---
+const KEY_DB = 'productosDB';
 
-/**
- * Simula una llamada a API para obtener todos los productos.
- */
-export const getProductos = async (): Promise<IProducto[]> => {
-  // Simulamos un pequeño retraso de red
-  await new Promise(resolve => setTimeout(resolve, 500)); 
-  return productosDB;
-}
-
-/**
- * Simula una llamada a API para un solo producto.
- */
-export const getProductoByCodigo = async (codigo: string): Promise<IProducto> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const producto = productosDB.find(p => p.codigo === codigo);
-  if (!producto) {
-    throw new Error('Producto no encontrado');
+const cargarBD = (): IProducto[] => {
+  try {
+    const guardado = localStorage.getItem(KEY_DB);
+    if (guardado) {
+      return JSON.parse(guardado);
+    }
+    // Si no hay nada, guardamos los iniciales
+    localStorage.setItem(KEY_DB, JSON.stringify(datosIniciales));
+    return datosIniciales;
+  } catch (e) {
+    return datosIniciales;
   }
+};
+
+const guardarBD = (datos: IProducto[]) => {
+  localStorage.setItem(KEY_DB, JSON.stringify(datos));
+};
+
+
+// --- 4. FUNCIONES CRUD (Lo que usará el Admin) ---
+
+export const getProductos = async (): Promise<IProducto[]> => {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simular red
+  return cargarBD();
+};
+
+export const getProductoByCodigo = async (codigo: string): Promise<IProducto> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const productos = cargarBD();
+  const producto = productos.find(p => p.codigo === codigo);
+  if (!producto) throw new Error('Producto no encontrado');
   return producto;
+};
+
+export const getCategorias = async (): Promise<string[]> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const productos = cargarBD();
+  return [...new Set(productos.map(p => p.categoria))];
+};
+
+// ¡NUEVO! Eliminar producto
+export const deleteProducto = async (codigo: string): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  let productos = cargarBD();
+  // Filtramos para quitar el producto con ese código
+  productos = productos.filter(p => p.codigo !== codigo);
+  guardarBD(productos);
+};
+
+// ¡NUEVO! Guardar (Crear o Editar)
+export const saveProducto = async (producto: IProducto): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  let productos = cargarBD();
+  
+  const index = productos.findIndex(p => p.codigo === producto.codigo);
+  
+  if (index >= 0) {
+    // Si ya existe, lo actualizamos (Editar)
+    productos[index] = producto;
+  } else {
+    // Si no existe, lo agregamos al final (Crear nuevo)
+    productos.push(producto);
+  }
+  
+  guardarBD(productos);
+};
+
+
+
+
+
+
+
+
+
+
+// ----------------------------------------------------------- datos con usuarios ---------------------------------------------------
+
+// ... (Mantén todo lo de IProducto y sus funciones igual) ...
+
+// 1. NUEVA INTERFAZ PARA USUARIOS
+export interface IUsuario {
+  run: string;      // Identificador único (como el codigo de producto)
+  nombre: string;
+  apellidos: string;
+  email: string;
+  tipo: 'Cliente' | 'Administrador' | 'Vendedor';
+  region?: string;
+  comuna?: string;
 }
 
-/**
- * Simula una llamada a API para obtener las categorías.
- */
-export const getCategorias = async (): Promise<string[]> => {
+// 2. Datos Iniciales de Usuarios (Para que no empiece vacío)
+const usuariosIniciales: IUsuario[] = [
+  {
+    run: "12345678-K",
+    nombre: "Ana",
+    apellidos: "González",
+    email: "ana.gonzalez@duoc.cl",
+    tipo: "Cliente",
+    region: "Metropolitana",
+    comuna: "Santiago"
+  },
+  {
+    run: "98765432-1",
+    nombre: "Carlos",
+    apellidos: "Pérez",
+    email: "carlos.perez@gmail.com",
+    tipo: "Cliente",
+    region: "Biobío",
+    comuna: "Concepción"
+  },
+  {
+    run: "11223344-5",
+    nombre: "Admin",
+    apellidos: "MilSabores",
+    email: "admin@pasteleria.cl",
+    tipo: "Administrador",
+    region: "Metropolitana",
+    comuna: "Providencia"
+  }
+];
+
+const KEY_USERS_DB = 'usuariosDB';
+
+// --- LÓGICA DE PERSISTENCIA (USUARIOS) ---
+
+const cargarUsuariosBD = (): IUsuario[] => {
+  try {
+    const guardado = localStorage.getItem(KEY_USERS_DB);
+    if (guardado) {
+      return JSON.parse(guardado);
+    }
+    localStorage.setItem(KEY_USERS_DB, JSON.stringify(usuariosIniciales));
+    return usuariosIniciales;
+  } catch (e) {
+    return usuariosIniciales;
+  }
+};
+
+const guardarUsuariosBD = (datos: IUsuario[]) => {
+  localStorage.setItem(KEY_USERS_DB, JSON.stringify(datos));
+};
+
+// --- FUNCIONES CRUD USUARIOS ---
+
+export const getUsuarios = async (): Promise<IUsuario[]> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return cargarUsuariosBD();
+};
+
+export const getUsuarioByRun = async (run: string): Promise<IUsuario> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const usuarios = cargarUsuariosBD();
+  const usuario = usuarios.find(u => u.run === run);
+  if (!usuario) throw new Error('Usuario no encontrado');
+  return usuario;
+};
+
+export const deleteUsuario = async (run: string): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 500));
-  // Usamos un Set para obtener valores únicos y luego lo convertimos en arreglo
-  const categorias = [...new Set(productosDB.map(p => p.categoria))];
-  return categorias;
-}
+  let usuarios = cargarUsuariosBD();
+  usuarios = usuarios.filter(u => u.run !== run);
+  guardarUsuariosBD(usuarios);
+};
+
+export const saveUsuario = async (usuario: IUsuario): Promise<void> => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  let usuarios = cargarUsuariosBD();
+  
+  const index = usuarios.findIndex(u => u.run === usuario.run);
+  
+  if (index >= 0) {
+    usuarios[index] = usuario; // Editar
+  } else {
+    usuarios.push(usuario); // Crear
+  }
+  
+  guardarUsuariosBD(usuarios);
+};
