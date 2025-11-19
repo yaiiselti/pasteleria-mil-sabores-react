@@ -5,8 +5,13 @@ import { Navbar, Nav, Container } from 'react-bootstrap';
 // 2. Importamos el componente "Link" del router para la navegación
 import { Link } from 'react-router-dom';
 
+import { useCarrito } from '../hooks/useCarrito';
 function Header() {
+  // 2. Usamos el hook para "consumir" el contexto
+  // Obtenemos el total de items del CarritoContext
+  const { totalItems } = useCarrito();
   return (
+
     // Usamos el componente <Navbar> de Bootstrap
     <Navbar bg="light" expand="lg" className="main-header">
       <Container>
@@ -45,7 +50,8 @@ function Header() {
             */}
             
             <Nav.Link as={Link} to="/carrito" id="cart-link">
-              Carrito (0)
+              {/* 3. Reemplazamos el '0' estático por el valor del contexto */}
+              Carrito ({totalItems})
             </Nav.Link>
           </Nav>
 

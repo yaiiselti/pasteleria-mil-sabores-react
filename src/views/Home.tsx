@@ -1,35 +1,41 @@
-
-// 1. Importamos los componentes de React-Bootstrap que usaremos
-import { Container, Row, Col, Card } from 'react-bootstrap';
-// Importamos 'Link' para que los botones sean enlaces de navegación
+import { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+
+
+// Separamos la importación de la función (valor) y la interfaz (tipo)
+import { getProductos } from '../services/PasteleriaService';
+import type { IProducto } from '../services/PasteleriaService';
 
 function Home() {
   
-  // (En la Fase 2, leeremos esto desde nuestro "Servicio",
-  // pero por ahora, usamos los datos estáticos de nuestro index.html)
-  const productosDestacados = [
-    { codigo: "TC001", nombre: "Torta Cuadrada de Chocolate", precio: "45.000", imagen: "../assets/img/productos/torta-chocolate-1.png" },
-    { codigo: "TC002", nombre: "Torta Cuadrada de Frutas", precio: "50.000", imagen: "../assets/img/productos/torta-frutas-1.png" },
-    { codigo: "TT001", nombre: "Torta Circular de Vainilla", precio: "40.000", imagen: "../assets/img/productos/torta-vainilla-1.png" },
-    { codigo: "TT002", nombre: "Torta Circular de Manjar", precio: "42.000", imagen: "../assets/img/productos/torta-manjar-1.png" },
-    { codigo: "PI001", nombre: "Mousse de Chocolate", precio: "5.000", imagen: "../assets/img/productos/mousse-chocolate-1.png" },
-    { codigo: "PI002", nombre: "Tiramisú Clásico", precio: "5.500", imagen: "../assets/img/productos/tiramisu-1.png" },
-    { codigo: "PG001", nombre: "Brownie Sin Gluten", precio: "4.000", imagen: "../assets/img/productos/brownie-sg-1.png" },
-    { codigo: "PV001", nombre: "Torta Vegana de Chocolate", precio: "50.000", imagen: "../assets/img/productos/torta-vegana-1.png" },
-  ];
+  const [productosDestacados, setProductosDestacados] = useState<IProducto[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const cargarDestacados = async () => {
+      try {
+        setLoading(true);
+        const todosLosProductos = await getProductos();
+        setProductosDestacados(todosLosProductos.slice(0, 8)); // Tomamos los primeros 8
+      } catch (error) {
+        console.error("Error al cargar productos destacados:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    cargarDestacados();
+  }, []);
 
   return (
-    // Usamos <main> y <Container> de Bootstrap para el contenido
     <main>
       <Container>
 
-        {/* --- 1. HERO BANNER --- */}
-        {/* (Usamos las clases de Bootstrap "text-center", "py-5" = padding y) */}
+        {/* --- 1. HERO BANNER (Sin cambios) --- */}
         <section className="hero-banner text-center py-5">
           <h2>Bienvenido a la Tradición</h2>
           <p>50 años horneando momentos inolvidables.</p>
-          {/* Usamos el componente <Link> con las CLASES de Bootstrap */}
           <Link to="/tienda" className="btn btn-primary btn-principal">
             Ver Productos
           </Link>
@@ -37,43 +43,48 @@ function Home() {
 
         {/* --- 2. PRODUCTOS DESTACADOS --- */}
         <section className="featured-products py-5">
-          <h3 className="text-center mb-4">Productos Destacados</h3>
+          <h3 className="text-center mb-4 logo-text">Productos Destacados</h3>
           
-          {/* Usamos <Row> y <Col> para la cuadrícula de 3 (lg={4} significa 4/12) */}
-          <Row xs={1} md={2} lg={3} className="g-4">
-            {productosDestacados.map((producto) => (
-              <Col key={producto.codigo}>
-                {/* Usamos el componente <Card> de Bootstrap */}
-                <Card className="product-card h-100">
-                  <Card.Img 
-                    variant="top" 
-                    src={producto.imagen} 
-                    className="product-card-img" // (Usaremos esta clase para el 'object-fit')
-                  />
-                  <Card.Body className="d-flex flex-column">
-                    <Card.Title>
-                      <Link to={`/producto/${producto.codigo}`} className="card-stretched-link">
-                        {producto.nombre}
+          {loading ? (
+            <div className="text-center">
+              <Spinner animation="border" variant="secondary" />
+            </div>
+          ) : (
+            // He cambiado lg={3} a lg={4} para que quepan 4 productos, como en la Parte 1
+            <Row xs={1} md={2} lg={4} className="g-4"> 
+              {productosDestacados.map((producto) => (
+                <Col key={producto.codigo}>
+                  <Card className="product-card h-100">
+                    {/* 2. CORRECCIÓN de "imagen" vs "imagenes" */}
+                    <Card.Img 
+                      variant="top" 
+                      src={producto.imagenes[0]} // Usamos la primera imagen del arreglo
+                      className="product-card-img"
+                    />
+                    <Card.Body className="d-flex flex-column">
+                      <Card.Title>
+                        <Link to={`/producto/${producto.codigo}`} className="card-stretched-link">
+                          {producto.nombre}
+                        </Link>
+                      </Card.Title>
+                      <Card.Text>${producto.precio.toLocaleString('es-CL')}</Card.Text>
+                      <Link
+                        to={`/producto/${producto.codigo}`} 
+                        className="btn btn-outline-primary btn-secundario mt-auto"
+                      >
+                        Ver detalle
                       </Link>
-                    </Card.Title>
-                    <Card.Text>${producto.precio}</Card.Text>
-                    <Link
-                      to={`/producto/${producto.codigo}`} 
-                      className="btn btn-outline-primary btn-secundario mt-auto"
-                    >
-                      Ver detalle
-                    </Link>
-                  </Card.Body>
-                </Card>
-              </Col>
-            ))}
-          </Row>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          )}
         </section>
 
-        {/* --- 3. MISIÓN Y VISIÓN --- */}
+        {/* --- 3. MISIÓN Y VISIÓN (Sin cambios) --- */}
         <section className="mission-vision py-5">
           <Row className="g-4">
-            {/* Usamos <Col> para dividir 50/50 */}
             <Col md={6}>
               <div className="mission-box p-4">
                 <h3>Nuestra Misión</h3>

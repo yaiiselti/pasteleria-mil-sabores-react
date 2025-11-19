@@ -1,17 +1,27 @@
+// 1. DEFINIMOS Y EXPORTAMOS LA INTERFAZ
+export interface IProducto {
+  codigo: string;
+  nombre: string;
+  categoria: string;
+  precio: number;
+  descripcion: string;
+  imagenes: string[];
+}
 
-const productosDB = [
-
+// 2. Le decimos a TypeScript que nuestro arreglo USA esa interfaz
+const productosDB: IProducto[] = [
   {
     codigo: "TC001",
     nombre: "Torta Cuadrada de Chocolate",
+    // ... (el resto de tus 16 productos)
     categoria: "Tortas Cuadradas",
     precio: 45000,
     descripcion: "Deliciosa torta de chocolate con capas de ganache y un toque de avellanas. Personalizable con mensajes especiales.",
     imagenes: [
-      "../assets/img/productos/torta-chocolate-1.png", // Imagen Principal
-      "../assets/img/productos/torta-chocolate-2.png", // Thumbnail 1
-      "../assets/img/productos/torta-chocolate-3.png", // Thumbnail 2
-      "../assets/img/productos/torta-chocolate-1.png"  // Thumbnail 3
+      "../assets/img/productos/torta-chocolate-1.png",
+      "../assets/img/productos/torta-chocolate-2.png",
+      "../assets/img/productos/torta-chocolate-3.png",
+      "../assets/img/productos/torta-chocolate-1.png"
     ]
   },
   {
@@ -40,8 +50,6 @@ const productosDB = [
       "../assets/img/productos/torta-vainilla-1.png"
     ]
   },
-  // ... (Y así con todos los 16 productos) ...
-  // (He completado el resto de la base de datos con la misma estructura)
   {
     codigo: "TT002",
     nombre: "Torta Circular de Manjar",
@@ -217,9 +225,8 @@ const productosDB = [
 
 /**
  * Simula una llamada a API para obtener todos los productos.
- * (Devuelve una Promesa, como en tu login.service.ts )
  */
-export const getProductos = async () => {
+export const getProductos = async (): Promise<IProducto[]> => {
   // Simulamos un pequeño retraso de red
   await new Promise(resolve => setTimeout(resolve, 500)); 
   return productosDB;
@@ -228,7 +235,7 @@ export const getProductos = async () => {
 /**
  * Simula una llamada a API para un solo producto.
  */
-export const getProductoByCodigo = async (codigo: string) => {
+export const getProductoByCodigo = async (codigo: string): Promise<IProducto> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   const producto = productosDB.find(p => p.codigo === codigo);
   if (!producto) {
@@ -240,8 +247,9 @@ export const getProductoByCodigo = async (codigo: string) => {
 /**
  * Simula una llamada a API para obtener las categorías.
  */
-export const getCategorias = async () => {
+export const getCategorias = async (): Promise<string[]> => {
   await new Promise(resolve => setTimeout(resolve, 500));
+  // Usamos un Set para obtener valores únicos y luego lo convertimos en arreglo
   const categorias = [...new Set(productosDB.map(p => p.categoria))];
   return categorias;
 }

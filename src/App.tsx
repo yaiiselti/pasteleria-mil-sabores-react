@@ -15,6 +15,9 @@ import Login from './views/Login';
 import Registro from './views/Registro';
 import Tienda from './views/Tienda';
 import Producto from './views/Producto';
+import Carrito from './views/Carrito';
+import Checkout from './views/Checkout';
+import Confirmacion from './views/Confirmacion';
 function App() {
 
   return (
@@ -37,6 +40,9 @@ function App() {
           <Route path="/registro" element={ <Registro /> } />
           <Route path="/tienda" element={ <Tienda /> } />
           <Route path="/producto/:codigo" element={ <Producto /> } />
+          <Route path="/carrito" element={ <Carrito /> } />
+          <Route path="/checkout" element={ <Checkout /> } />
+          <Route path="/confirmacion" element={ <Confirmacion /> } />
         </Routes>
       </main>
 
