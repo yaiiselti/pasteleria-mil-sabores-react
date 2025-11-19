@@ -1,12 +1,12 @@
 
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 
 
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './views/Home';
-import Nosotros from './views/Nosotros'; 
+import Nosotros from './views/Nosotros';
 import Blog from './views/BLog';
 import BlogArticulo1 from './views/BlogArticulo1';
 import BlogArticulo2 from './views/BlogArticulo2';
@@ -28,7 +28,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      
+
       <Header />
 
       {/* Usamos <main> de HTML5 y 'py-5' (padding) de Bootstrap
@@ -36,26 +36,27 @@ function App() {
       */}
       <main className="py-5">
         <Routes>
-          <Route path="/" element={ <Home /> } />
-          <Route path="/nosotros" element={ <Nosotros /> } />
-          <Route path="/blog" element={ <Blog /> } />
-          <Route path="/blog-articulo-1" element={ <BlogArticulo1 /> } />
-          <Route path="/blog-articulo-2" element={ <BlogArticulo2 /> } />
-          <Route path="/contacto" element={ <Contacto /> } />
-          <Route path="/login" element={ <Login /> } />
-          <Route path="/registro" element={ <Registro /> } />
-          <Route path="/tienda" element={ <Tienda /> } />
-          <Route path="/producto/:codigo" element={ <Producto /> } />
-          <Route path="/carrito" element={ <Carrito /> } />
-          <Route path="/checkout" element={ <Checkout /> } />
-          <Route path="/confirmacion" element={ <Confirmacion /> } />
-        </Routes>
+          <Route element={<> <Header /><main className="py-5"><Outlet /></main><Footer /> </>}>
+            <Route path="/" element={<Home />} />
+            <Route path="/nosotros" element={<Nosotros />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog-articulo-1" element={<BlogArticulo1 />} />
+            <Route path="/blog-articulo-2" element={<BlogArticulo2 />} />
+            <Route path="/contacto" element={<Contacto />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Registro />} />
+            <Route path="/tienda" element={<Tienda />} />
+            <Route path="/producto/:codigo" element={<Producto />} />
+            <Route path="/carrito" element={<Carrito />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/confirmacion" element={<Confirmacion />} />
+          </Route>
 
-        {/* RUTAS PRIVADAS (Admin) */}
-        <Route path="/admin" element={<AdminLayout />}>
-          
+          {/* RUTAS PRIVADAS (Admin) */}
+          <Route path="/admin" element={<AdminLayout />}>
+
             <Route index element={<AdminDashboard />} />
-            
+
             <Route path="productos" element={<AdminProductos />} />
             <Route path="productos/nuevo" element={<AdminProductoForm />} />
             <Route path="productos/editar/:codigo" element={<AdminProductoForm />} />
@@ -63,12 +64,15 @@ function App() {
             <Route path="usuarios" element={<AdminUsuarios />} />
             <Route path="usuarios/nuevo" element={<AdminUsuarioForm />} />
             <Route path="usuarios/editar/:run" element={<AdminUsuarioForm />} />
-        </Route>
+          </Route>
+        </Routes>
+
+
       </main>
 
-      <Footer /> 
-      
-    </BrowserRouter>
+      <Footer />
+
+    </BrowserRouter >
   )
 }
 
