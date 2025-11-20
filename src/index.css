@@ -1,5 +1,3 @@
-/* Archivo: src/index.css */
-
 /* --- 1. Importación de Fuentes (Parte 1) --- */
 @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Pacifico&display=swap');
 
@@ -59,10 +57,6 @@ body {
 
 /* --- 5. Estilos de Componentes Migrados (Home) --- */
 
-/* (Botones)
-   Sobreescribimos los colores de Bootstrap para usar 
-   nuestra paleta de "Forma C" [cite: 3141-3146]
-*/
 .btn-principal {
   background-color: var(--color-acento-choco) !important;
   border-color: var(--color-acento-choco) !important;
@@ -316,3 +310,56 @@ body {
 #share-fb:hover i { color: #1877F2; } 
 #share-tw:hover i { color: #1DA1F2; } 
 #share-wa:hover i { color: #25D366; }
+
+/* --- ESTILOS DEL MENÚ DE NAVEGACIÓN --- */
+
+/* 1. Aumentamos el tamaño y preparamos la animación */
+.nav-menu a,
+.nav-user a {
+  font-family: var(--fuente-principal);
+  font-size: 16px;
+  font-weight: 500; /* Un grosor medio por defecto */
+  text-decoration: none;
+  padding: 10px 8px; /* Un poco más de espacio lateral */
+  
+  display: inline-block; 
+  transition: transform 0.2s ease, font-weight 0.2s ease; /* Animación suave */
+}
+
+/* 2. El efecto de Zoom al pasar el mouse */
+.nav-menu a:hover,
+.nav-user a:hover {
+  transform: scale(1.05); /* Crece un 10% */
+  color: var(--color-acento-choco); /* Opcional: cambia de color */
+}
+
+/* 3. Clase especial para el enlace activo (La usaremos en el Header) */
+.nav-link-activo {
+  font-weight: 800 !important; /* Letra bien gruesa (Bold) */
+  color: var(--color-acento-choco) !important; /* Destacado */
+  transform: scale(1.05); /* Un poquito más grande fijo */
+}
+
+/* --- ESTILOS DE ÍCONOS DE REDES SOCIALES / COMPARTIR --- */
+
+/* Aseguramos que los íconos SVG sean bloques para animar bien */
+.footer-social a svg,
+.product-share .share-icons button svg {
+  transition: transform 0.2s ease-in-out, fill 0.2s ease-in-out; /* Transición suave */
+  vertical-align: middle; /* Para que estén bien alineados si hay texto */
+}
+
+/* Efecto de Zoom y cambio de color al pasar el cursor */
+.footer-social a:hover svg,
+.product-share .share-icons button:hover svg {
+  transform: scale(1.2); /* Agrandar un 20% */
+  /* Opcional: Si quieres que cambien a un color acento al pasar el mouse */
+  fill: var(--color-acento-rosa); 
+}
+
+/* Opcional: Ajuste para el botón de compartir, si es necesario */
+.product-share .share-icons button {
+  background-color: transparent !important; /* Asegura que no tenga fondo de botón */
+  border: none !important; /* Sin borde de botón */
+  padding: 0 !important; /* Sin relleno de botón */
+}

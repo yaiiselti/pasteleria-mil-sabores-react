@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 // 1. AHORA TODAS ESTAS IMPORTACIONES SE USARÁN
 import { Container, Row, Col, Image, Form, Button, Spinner, Alert } from 'react-bootstrap';
+import { IconoFacebook, IconoInstagram, IconoWhatsapp } from '../components/Iconos';
 import { useParams, Link } from 'react-router-dom';
 import { getProductoByCodigo } from '../services/PasteleriaService';
 import type { IProducto } from '../services/PasteleriaService';
@@ -52,6 +53,23 @@ function Producto() {
     setCantidad(1);
     setMensaje('');
   };
+
+  const handleShare = (red: 'fb' | 'tw' | 'wa') => {
+    const url = window.location.href; // La URL actual del producto
+    const text = encodeURIComponent(`¡Mira esta deliciosa ${producto?.nombre} de Pastelería Mil Sabores!`);
+    
+    let shareUrl = '';
+
+    if (red === 'fb') {
+      shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+    } else if (red === 'tw') {
+      shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+    } else if (red === 'wa') {
+      shareUrl = `https://api.whatsapp.com/send?text=${text} ${url}`;
+    }
+
+    window.open(shareUrl, '_blank', 'width=600,height=400');
+  };
   
   // 2. AQUÍ VA EL BLOQUE DE CARGA
   // Si 'loading' es true, muestra esto y NADA MÁS.
@@ -78,8 +96,12 @@ function Producto() {
     );
   }
   
+  const botonesSociales = [
+    { id: 'fb', Icon: IconoFacebook, label: 'Facebook' },
+    { id: 'tw', Icon: IconoInstagram, label: 'Instagram' },
+    { id: 'wa', Icon: IconoWhatsapp, label: 'WhatsApp' }
+  ] as const;
   // 4. EL RETURN PRINCIPAL
-  // Si 'loading' es false Y 'error' es null, muestra el producto.
   return (
     <Container className="py-5">
       {producto && ( // <-- Nos aseguramos que producto no sea null
@@ -135,14 +157,23 @@ function Producto() {
                 </Button>
               </Form>
 
-              <div className="product-share">
-                 <h4 className="share-title">Compartir este producto:</h4>
-                 <div className="share-icons">
-                   <a href="#" className="share-link"><i className="fa-brands fa-facebook"></i></a>
-                   <a href="#" className="share-link"><i className="fa-brands fa-twitter"></i></a>
-                   <a href="#" className="share-link"><i className="fa-brands fa-whatsapp"></i></a>
+              <div className="product-share mt-4 pt-3 border-top">
+                 <h5 className="share-title mb-3">Compartir este producto:</h5>
+                 <div className="share-icons d-flex gap-3">
+                   
+                   {botonesSociales.map(({ id, Icon, label }) => (
+                     <button 
+                       key={id}
+                       onClick={() => handleShare(id)} 
+                       className="btn border-0 p-0 share-link"
+                       title={`Compartir en ${label}`}
+                     >
+                       <Icon size={32} color="#666769ff" />
+                     </button>
+                   ))}
                  </div>
               </div>
+
             </div>
           </Col>
         </Row>

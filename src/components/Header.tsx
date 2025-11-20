@@ -1,23 +1,31 @@
-// Archivo: src/components/Header.tsx
-
-// 1. Importamos los componentes de React-Bootstrap que necesitamos
-import { Navbar, Nav, Container } from 'react-bootstrap';
-// 2. Importamos el componente "Link" del router para la navegación
-import { Link } from 'react-router-dom';
-
+import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
+// 1. IMPORTANTE: Agregamos 'useLocation' para saber la ruta actual
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCarrito } from '../hooks/useCarrito';
-function Header() {
-  // 2. Usamos el hook para "consumir" el contexto
-  // Obtenemos el total de items del CarritoContext
-  const { totalItems } = useCarrito();
-  return (
+import { useAuth } from '../context/AuthContext';
 
-    // Usamos el componente <Navbar> de Bootstrap
-    <Navbar bg="light" expand="lg" className="main-header">
+function Header() {
+  const { totalItems } = useCarrito();
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+  
+  // 2. Obtenemos la ubicación actual (ej: "/tienda")
+  const location = useLocation();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  // 3. Función auxiliar para saber si un link está activo
+  // Si la ruta actual es igual a la del link, devuelve la clase negrita
+  const getActiveClass = (path: string) => {
+    return location.pathname === path ? "nav-link-activo" : "";
+  };
+
+  return (
+    <Navbar bg="light" expand="lg" className="main-header sticky-top shadow-sm">
       <Container>
-        {/* Usamos "Link" para el logo.
-          "as={Link}" le dice a Bootstrap que "actúe como un enlace de React Router".
-        */}
         <Navbar.Brand as={Link} to="/" className="nav-logo">
           <h1 className="logo-text">Pastelería Mil Sabores</h1>
         </Navbar.Brand>
@@ -25,33 +33,75 @@ function Header() {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           
-          {/* Menú Principal (Tienda) */}
           <Nav className="me-auto nav-menu">
-            <Nav.Link as={Link} to="/">Home</Nav.Link>
-            <Nav.Link as={Link} to="/tienda">Productos</Nav.Link>
-            <Nav.Link as={Link} to="/nosotros">Nosotros</Nav.Link>
-            <Nav.Link as={Link} to="/blog">Blog</Nav.Link>
-            <Nav.Link as={Link} to="/contacto">Contacto</Nav.Link>
+            {/* 4. APLICAMOS LA LÓGICA A CADA ENLACE */}
+            <Nav.Link as={Link} to="/" className={getActiveClass('/')}>
+              Home
+            </Nav.Link>
+            <Nav.Link as={Link} to="/tienda" className={getActiveClass('/tienda')}>
+              Productos
+            </Nav.Link>
+            <Nav.Link as={Link} to="/nosotros" className={getActiveClass('/nosotros')}>
+              Nosotros
+            </Nav.Link>
+            <Nav.Link as={Link} to="/blog" className={getActiveClass('/blog')}>
+              Blog
+            </Nav.Link>
+            <Nav.Link as={Link} to="/contacto" className={getActiveClass('/contacto')}>
+              Contacto
+            </Nav.Link>
           </Nav>
 
-          {/* Menú de Usuario (Sesión y Carrito) */}
-          <Nav className="nav-user">
-            {/* Aquí recrearemos la lógica de "Mi Perfil" vs "Login"
-              con el Context API en la Fase 3.
-              Por ahora, ponemos los enlaces públicos.
-            */}
-            <Nav.Link as={Link} to="/login" className="nav-publico">Iniciar Sesión</Nav.Link>
-            <Nav.Link as={Link} to="/registro" className="nav-publico">Registrar</Nav.Link>
-            
-            {/*
-            <Nav.Link as={Link} to="/perfil" className="nav-cliente">Mi Perfil</Nav.Link>
-            <Nav.Link as={Link} to="/admin" className="nav-admin">Panel Admin</Nav.Link>
-            <Nav.Link as={Link} to="#" id="logout-link" className="nav-logueado">Cerrar Sesión</Nav.Link>
-            */}
-            
-            <Nav.Link as={Link} to="/carrito" id="cart-link">
-              {/* 3. Reemplazamos el '0' estático por el valor del contexto */}
-              Carrito ({totalItems})
+          <Nav className="nav-user align-items-center">
+            {!isAuthenticated ? (
+              <>
+                <Nav.Link as={Link} to="/login" className={`nav-publico ${getActiveClass('/login')}`}>
+                  Iniciar Sesión
+                </Nav.Link>
+                <Nav.Link as={Link} to="/registro" className={`nav-publico ${getActiveClass('/registro')}`}>
+                  Registrar
+                </Nav.Link>
+              </>
+            ) : (
+              <NavDropdown 
+                title={
+                  // Usamos el color chocolate directamente para asegurar el estilo "natural"
+                  <span className=" " style={{ color: '#8B4513', fontSize: '1.1rem' }}>
+                    Hola, {user?.nombre}
+                  </span>
+                }
+              >
+                {user?.rol === 'Administrador' && (
+                  <>
+                    <NavDropdown.Item as={Link} to="/admin">
+                      <i className="fa-solid fa-gauge me-2"></i> Panel Admin
+                    </NavDropdown.Item>
+                    <NavDropdown.Divider />
+                  </>
+                )}
+                <NavDropdown.Item as={Link} to="/perfil">
+                  <i className="fa-solid fa-user me-2"></i> Mi Perfil
+                </NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Item onClick={handleLogout} className="text-danger">
+                  <i className="fa-solid fa-right-from-bracket me-2"></i> Cerrar Sesión
+                </NavDropdown.Item>
+              </NavDropdown>
+            )}
+
+            <Nav.Link as={Link} to="/carrito" id="cart-link" className={`ms-3 d-flex align-items-center ${getActiveClass('/carrito')}`}>
+              <i className="fa-solid fa-cart-shopping fs-5 me-1" style={{ color: '#8B4513' }}></i> 
+              <span style={{ color: '#8B4513' }}>Carrito</span>
+              
+              {totalItems > 0 && (
+               
+                <span 
+                  className="badge rounded-pill ms-2" 
+                  style={{ backgroundColor: '#8B4513', color: 'white' }}
+                >
+                  {totalItems}
+                </span>
+              )}
             </Nav.Link>
           </Nav>
 
