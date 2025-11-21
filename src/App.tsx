@@ -19,6 +19,9 @@ import Contacto from './views/Contacto';
 import Perfil from './views/Perfil';
 import PagoError from './views/PagoError'; 
 
+import RutaProtegida from './components/RutaProtegida'; // <--- IMPORTAR
+import NotFound from './views/NotFound';
+
 
 // Vistas Admin
 import AdminLayout from './components/AdminLayout';
@@ -38,18 +41,11 @@ function App() {
       
       <Routes>
         
-        {/* 1. LAYOUT PÚBLICO (Cliente) */}
-        {/* Este Route envuelve todas las páginas públicas y les pone Header y Footer */}
-        <Route element={
-          <> 
-            <Header /> 
-            <main className="py-5">
-              <Outlet /> {/* Aquí se carga Home, Tienda, etc. */}
-            </main>
-            <Footer /> 
-          </>
-        }>
-            <Route path="/" element={ <Home /> } />
+
+
+        <Route element={<RutaProtegida />}> {/* Solo requiere estar logueado */}
+           <Route element={<> <Header /><main className="py-5"><Outlet /></main><Footer /> </>}>
+              <Route path="/" element={ <Home /> } />
             <Route path="/tienda" element={ <Tienda /> } />
             <Route path="/producto/:codigo" element={ <Producto /> } />
             <Route path="/carrito" element={ <Carrito /> } />
@@ -64,13 +60,14 @@ function App() {
             <Route path="/contacto" element={ <Contacto /> } />
             <Route path="/perfil" element={ <Perfil /> } />
             <Route path="/pago-error" element={ <PagoError /> } />
+           </Route>
         </Route>
 
         {/* 2. LAYOUT ADMIN (Administrador) */}
-        {/* Este Route usa AdminLayout, que tiene su propio menú lateral */}
-        <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            
+        <Route element={<RutaProtegida soloAdmin={true} />}> {/* Requiere ser Admin */}
+          <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+
             <Route path="productos" element={<AdminProductos />} />
             <Route path="productos/nuevo" element={<AdminProductoForm />} />
             <Route path="productos/editar/:codigo" element={<AdminProductoForm />} />
@@ -78,7 +75,15 @@ function App() {
             <Route path="usuarios" element={<AdminUsuarios />} />
             <Route path="usuarios/nuevo" element={<AdminUsuarioForm />} />
             <Route path="usuarios/editar/:run" element={<AdminUsuarioForm />} />
+
+              <Route path="productos" element={<AdminProductos />} />
+              {/* ... etc ... */}
+          </Route>
         </Route>
+
+        <Route path="*" element={ 
+            <> <Header /><main className="py-5"><NotFound /></main><Footer /> </> 
+        } />
 
       </Routes>
     </BrowserRouter>

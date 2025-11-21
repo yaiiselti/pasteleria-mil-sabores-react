@@ -1,5 +1,5 @@
-import { createContext, useState, useContext, useEffect } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useState, useContext,  useEffect } from 'react';
+import type{ ReactNode } from 'react';
 import { getUsuarios } from '../services/PasteleriaService';
 
 // Definimos qué datos tendrá nuestro usuario en sesión
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // 2. Buscamos si el correo existe
     const usuarioEncontrado = usuarios.find(u => u.email.toLowerCase() === email.toLowerCase());
 
-    // 3. Regla especial para el Admin
+    // 3. Regla especial para el Admin (Respaldo por si acaso)
     if (email === 'admin@duoc.cl' && password === 'admin') {
        const adminUser: UserSession = { email, nombre: 'Administrador', rol: 'Administrador' };
        guardarSesion(adminUser);
@@ -44,17 +44,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (usuarioEncontrado) {
-        // Login Exitoso
-        const sessionData: UserSession = {
-            email: usuarioEncontrado.email,
-            nombre: usuarioEncontrado.nombre,
-            rol: usuarioEncontrado.tipo
-        };
-        guardarSesion(sessionData);
-        return { success: true, message: `Bienvenido ${usuarioEncontrado.nombre}` };
+        // --- AQUÍ AGREGAMOS LA VALIDACIÓN DE CONTRASEÑA ---
+        if (usuarioEncontrado.password === password) {
+            // Contraseña correcta: Login Exitoso
+            const sessionData: UserSession = {
+                email: usuarioEncontrado.email,
+                nombre: usuarioEncontrado.nombre,
+                rol: usuarioEncontrado.tipo
+            };
+            guardarSesion(sessionData);
+            return { success: true, message: `Bienvenido ${usuarioEncontrado.nombre}` };
+        } else {
+            // Contraseña incorrecta
+            return { success: false, message: 'Contraseña incorrecta' };
+        }
     }
 
-    return { success: false, message: 'Credenciales incorrectas' };
+    return { success: false, message: 'Usuario no encontrado' };
   };
 
   const guardarSesion = (userData: UserSession) => {
@@ -79,6 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// --- IMPORTANTE: ESTA ES LA EXPORTACIÓN QUE FALTABA ---
 // Hook personalizado
 export const useAuth = () => {
   const context = useContext(AuthContext);

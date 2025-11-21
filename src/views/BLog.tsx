@@ -28,7 +28,7 @@ function Blog() {
               
               {/* Este enlace (botón) irá al final gracias a "mt-auto" */}
               <Link 
-                to="/blog-articulo-1" 
+                to="../assets/record-guinness" 
                 className="btn btn-outline-primary btn-secundario mt-auto"
                 style={{ width: '150px' }} // Mantenemos el ancho del botón
               >

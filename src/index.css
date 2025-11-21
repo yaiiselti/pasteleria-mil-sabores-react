@@ -363,3 +363,20 @@ body {
   border: none !important; /* Sin borde de botón */
   padding: 0 !important; /* Sin relleno de botón */
 }
+
+/* --- Estilos del Carrito --- */
+
+/* El texto del mensaje truncado */
+.carrito-mensaje-preview {
+  max-width: 140px; /* En celular se corta antes */
+  cursor: help;     /* Muestra signo de interrogación al pasar el mouse */
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* En pantallas grandes (PC), dejamos ver más texto */
+@media (min-width: 768px) {
+  .carrito-mensaje-preview {
+    max-width: 250px; 
+  }
+}

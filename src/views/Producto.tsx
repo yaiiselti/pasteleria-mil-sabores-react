@@ -101,6 +101,8 @@ function Producto() {
     { id: 'tw', Icon: IconoInstagram, label: 'Instagram' },
     { id: 'wa', Icon: IconoWhatsapp, label: 'WhatsApp' }
   ] as const;
+
+  
   // 4. EL RETURN PRINCIPAL
   return (
     <Container className="py-5">
@@ -132,15 +134,21 @@ function Producto() {
               <p className="product-description">{producto.descripcion}</p>
 
               <Form onSubmit={handleAddToCart}>
-                {/* ... Formulario (sin cambios) ... */}
+
                 <Form.Group className="mb-3" controlId="product-custom-msg">
                   <Form.Label>Mensaje Personalizado (Opcional)</Form.Label>
                   <Form.Control 
                     type="text" 
-                    placeholder="Ej: ¡Feliz Cumpleaños!" 
+                    placeholder="Ej: ¡Feliz Cumpleaños! (Máx 50 letras)" 
                     value={mensaje}
+                    // 1. LÍMITE ESTRICTO: No deja escribir más de 50
+                    maxLength={50} 
                     onChange={(e) => setMensaje(e.target.value)}
                   />
+                  {/* 2. CONTADOR VISUAL: Le avisa al usuario cuánto le queda */}
+                  <Form.Text className="text-muted text-end d-block">
+                    {mensaje.length}/50 caracteres
+                  </Form.Text>
                 </Form.Group>
                 <Form.Group className="mb-3" controlId="product-quantity">
                   <Form.Label>Cantidad</Form.Label>

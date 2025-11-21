@@ -100,6 +100,19 @@ function AdminUsuarioForm() {
               </Col>
 
               <Col md={6}>
+                <Form.Group controlId="password">
+                  <Form.Label>Contraseña</Form.Label>
+                  <Form.Control 
+                    type="text" // Tipo texto para que el admin la vea y edite fácil
+                    name="password" 
+                    value={formData.password || ''} 
+                    onChange={handleChange} 
+                    placeholder="Asignar nueva clave"
+                  />
+                </Form.Group>
+              </Col>
+              
+              <Col md={6}>
                 <Form.Group controlId="region">
                   <Form.Label>Región</Form.Label>
                   <Form.Control type="text" name="region" value={formData.region} onChange={handleChange} />

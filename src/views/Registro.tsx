@@ -70,6 +70,7 @@ function Registro() {
           nombre: formData.nombre,
           apellidos: formData.apellidos,
           email: formData.email,
+          password: formData.password, // <--- AGREGAR ESTO (Guardamos la clave)
           tipo: 'Cliente',
           region: formData.region,
           comuna: formData.comuna

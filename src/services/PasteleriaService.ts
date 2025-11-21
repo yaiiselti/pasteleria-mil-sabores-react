@@ -13,7 +13,6 @@ const datosIniciales: IProducto[] = [
   {
     codigo: "TC001",
     nombre: "Torta Cuadrada de Chocolate",
-    // ... (el resto de tus 16 productos)
     categoria: "Tortas Cuadradas",
     precio: 45000,
     descripcion: "Deliciosa torta de chocolate con capas de ganache y un toque de avellanas. Personalizable con mensajes especiales.",
@@ -305,23 +304,26 @@ export const saveProducto = async (producto: IProducto): Promise<void> => {
 // ... (Mantén todo lo de IProducto y sus funciones igual) ...
 
 // 1. NUEVA INTERFAZ PARA USUARIOS
+// 1. Actualizamos la Interfaz
 export interface IUsuario {
-  run: string;      // Identificador único (como el codigo de producto)
+  run: string;
   nombre: string;
   apellidos: string;
   email: string;
+  password?: string; // <--- NUEVO (Opcional para no romper datos viejos, pero idealmente obligatorio)
   tipo: 'Cliente' | 'Administrador' | 'Vendedor';
   region?: string;
   comuna?: string;
 }
 
-// 2. Datos Iniciales de Usuarios (Para que no empiece vacío)
+// 2. Actualizamos los datos iniciales con contraseñas
 const usuariosIniciales: IUsuario[] = [
   {
     run: "12345678-K",
     nombre: "Ana",
     apellidos: "González",
     email: "ana.gonzalez@duoc.cl",
+    password: "1234", // <--- NUEVO
     tipo: "Cliente",
     region: "Metropolitana",
     comuna: "Santiago"
@@ -331,6 +333,7 @@ const usuariosIniciales: IUsuario[] = [
     nombre: "Carlos",
     apellidos: "Pérez",
     email: "carlos.perez@gmail.com",
+    password: "1234", // <--- NUEVO
     tipo: "Cliente",
     region: "Biobío",
     comuna: "Concepción"
@@ -339,7 +342,8 @@ const usuariosIniciales: IUsuario[] = [
     run: "11223344-5",
     nombre: "Admin",
     apellidos: "MilSabores",
-    email: "admin@pasteleria.cl",
+    email: "admin@duoc.cl",
+    password: "admin", // <--- NUEVO
     tipo: "Administrador",
     region: "Metropolitana",
     comuna: "Providencia"
