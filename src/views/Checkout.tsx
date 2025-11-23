@@ -71,19 +71,36 @@ function Checkout() {
     e.preventDefault();
     
     if (validarFormulario()) {
-      // --- SIMULACIÓN DE PAGO EXITOSO ---
-      // 1. Guardamos el pedido en un "historial" temporal (opcional, para la boleta)
-      localStorage.setItem('ultimoPedido', JSON.stringify({
-        items,
-        total: totalPrecio,
-        cliente: formData
-      }));
+      // 1. CREAR LA ORDEN
+      const nuevaOrden = {
+        id: Math.floor(Math.random() * 1000000), // ID aleatorio
+        fecha: new Date().toLocaleDateString(),
+        cliente: formData,
+        productos: items, // Guardamos los items del carrito
+        total: totalPrecio
+      };
 
-      // 2. Vaciamos el carrito global
+      // 2. GUARDAR EN LOCALSTORAGE (CRÍTICO)
+      // Usamos JSON.stringify para que sea texto
+      try {
+        localStorage.setItem('ultimaOrden', JSON.stringify(nuevaOrden));
+        
+        // Guardar también en el historial (opcional, para el perfil)
+        const historial = JSON.parse(localStorage.getItem('historialPedidos') || '[]');
+        historial.push(nuevaOrden);
+        localStorage.setItem('historialPedidos', JSON.stringify(historial));
+
+      } catch (error) {
+        console.error("Error al guardar orden:", error);
+        return; // Si falla el guardado, no seguimos
+      }
+
+      // 3. VACIAR EL CARRITO
       vaciarCarrito();
 
-      // 3. Redirigimos a la página de confirmación (que crearemos luego)
-      navigate('/confirmacion');
+      // 4. REDIRIGIR (Solo después de asegurar el guardado)
+      // Usamos replace: true para que no pueda volver atrás al checkout con el botón 'atrás'
+      navigate('/confirmacion', { replace: true });
     }
   };
 

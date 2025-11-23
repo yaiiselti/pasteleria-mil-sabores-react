@@ -62,8 +62,6 @@ function Producto() {
         setImagenPrincipal(prod.imagenes[0]);
         setResenas(reviews); 
 
-        // 4. LÓGICA DE RECOMENDACIÓN
-        // Buscamos productos de la MISMA categoría, pero que NO sean el producto actual
         const sugerencias = todosLosProductos
           .filter(p => p.categoria === prod.categoria && p.codigo !== prod.codigo)
           .slice(0, 3); // Tomamos solo 3 para mostrar
@@ -92,15 +90,14 @@ function Producto() {
     setMensaje('');
   };
 
-  const handleShare = (red: 'fb' | 'tw' | 'wa') => {
+  const handleShare = (red: 'fb' | 'wa'| 'ig') => {
     const url = window.location.href;
     const text = encodeURIComponent(`¡Mira esta deliciosa ${producto?.nombre} de Pastelería Mil Sabores!`);
     let shareUrl = '';
 
     if (red === 'fb') shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
-    else if (red === 'tw') shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
     else if (red === 'wa') shareUrl = `https://api.whatsapp.com/send?text=${text} ${url}`;
-
+    else if (red === 'ig') shareUrl = `https://www.instagram.com/?url=${url}&text=${text}`; 
     window.open(shareUrl, '_blank', 'width=600,height=400');
   };
 
@@ -137,7 +134,7 @@ function Producto() {
   
   const botonesSociales = [
     { id: 'fb', Icon: IconoFacebook, label: 'Facebook' },
-    { id: 'tw', Icon: IconoInstagram, label: 'Instagram' },
+    { id: 'ig', Icon: IconoInstagram, label: 'Instagram' },
     { id: 'wa', Icon: IconoWhatsapp, label: 'WhatsApp' }
   ] as const;
 

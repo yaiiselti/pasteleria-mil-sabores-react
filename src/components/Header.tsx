@@ -36,7 +36,7 @@ function Header() {
           <Nav className="me-auto nav-menu">
             {/* 4. APLICAMOS LA LÓGICA A CADA ENLACE */}
             <Nav.Link as={Link} to="/" className={getActiveClass('/')}>
-              Home
+              inicio
             </Nav.Link>
             <Nav.Link as={Link} to="/tienda" className={getActiveClass('/tienda')}>
               Productos

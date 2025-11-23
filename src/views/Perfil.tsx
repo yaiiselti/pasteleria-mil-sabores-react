@@ -3,8 +3,8 @@ import { Container, Card, Row, Col, Badge, Table, Button, Modal, Form } from 're
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
-import { getUsuarios, saveUsuario} from '../services/PasteleriaService';
-import type{ IUsuario } from '../services/PasteleriaService';
+import { getUsuarios, saveUsuario } from '../services/PasteleriaService';
+import type { IUsuario } from '../services/PasteleriaService';
 
 function Perfil() {
   const { user, logout, updateUserSession } = useAuth();
@@ -15,17 +15,31 @@ function Perfil() {
   const [datosEditables, setDatosEditables] = useState({
     nombre: '',
     apellidos: '',
-    email: '', // El email no se edita, pero lo necesitamos para buscar
-    run: '',   // El run no se edita
-    password: '' // Mantenemos la password oculta
+    email: '', 
+    run: '',   
+    password: '' 
   });
 
-  // Datos históricos (Simulados)
-  const historial = JSON.parse(localStorage.getItem('historialPedidos') || '[]');
-  const ultimaOrden = JSON.parse(localStorage.getItem('ultimaOrden') || 'null');
-  const pedidos = ultimaOrden ? [ultimaOrden, ...historial] : historial;
+  // --- LÓGICA DE HISTORIAL POR USUARIO ---
+  const obtenerMisPedidos = () => {
+    if (!user) return [];
+    
+    // 1. Leemos todo el historial global
+    const historialGlobal = JSON.parse(localStorage.getItem('historialPedidos') || '[]');
+    
+    // 2. Filtramos SOLO los que pertenecen al usuario conectado
+    // (Asumiendo que en el checkout se guardó el email en orden.cliente.email)
+    const misPedidos = historialGlobal.filter((orden: any) => 
+      orden.cliente.email.toLowerCase() === user.email.toLowerCase()
+    );
+    
+    // Ordenamos para ver el más reciente primero
+    return misPedidos.reverse();
+  };
 
-  // Cargar datos reales del usuario al abrir el modal
+  const pedidos = obtenerMisPedidos();
+  // ---------------------------------------
+
   const handleOpenModal = async () => {
     if (user) {
       const usuariosDB = await getUsuarios();
@@ -37,7 +51,7 @@ function Perfil() {
           apellidos: usuarioReal.apellidos,
           email: usuarioReal.email,
           run: usuarioReal.run,
-          password: usuarioReal.password || '' // Mantenemos la clave
+          password: usuarioReal.password || '' 
         });
         setShowModal(true);
       }
@@ -46,17 +60,12 @@ function Perfil() {
 
   const handleGuardarCambios = async () => {
     try {
-      // 1. Creamos el objeto usuario actualizado
-      // (Nota: En un caso real, no deberíamos necesitar reenviar todo, pero saveUsuario así funciona)
       const usuarioActualizado: IUsuario = {
         ...datosEditables,
-        tipo: user?.rol || 'Cliente'
+        tipo: user?.rol === 'Administrador' ? 'Administrador' : 'Cliente'
       };
 
-      // 2. Guardamos en la "Base de Datos"
       await saveUsuario(usuarioActualizado);
-
-      // 3. Actualizamos la sesión en vivo (Header, etc.)
       updateUserSession({ nombre: datosEditables.nombre });
 
       showNotification('Perfil actualizado correctamente', 'success');
@@ -104,19 +113,23 @@ function Perfil() {
           </Card>
         </Col>
 
-        {/* Tarjeta de Historial */}
+        {/* Tarjeta de Historial de Pedidos */}
         <Col md={8}>
           <Card className="shadow-sm border-0 h-100">
             <Card.Header className="bg-white py-3">
-              <h5 className="mb-0">Historial de Pedidos</h5>
+              <h5 className="mb-0">Mis Pedidos Anteriores</h5>
             </Card.Header>
             <Card.Body>
               {pedidos.length === 0 ? (
-                <p className="text-center text-muted py-4">Aún no has realizado pedidos.</p>
+                <div className="text-center py-5 text-muted">
+                  <i className="fa-solid fa-bag-shopping fa-2x mb-3"></i>
+                  <p>Aún no has realizado pedidos con esta cuenta.</p>
+                  <Link to="/tienda" className="btn btn-sm btn-principal">Ir a comprar</Link>
+                </div>
               ) : (
                 <div className="table-responsive">
                   <Table hover className="align-middle">
-                    <thead>
+                    <thead className="bg-light">
                       <tr>
                         <th>Orden #</th>
                         <th>Fecha</th>
@@ -127,9 +140,11 @@ function Perfil() {
                     <tbody>
                       {pedidos.map((pedido: any, index: number) => (
                         <tr key={index}>
-                          <td>#{pedido.id || Math.floor(Math.random() * 1000)}</td>
-                          <td>{pedido.fecha || new Date().toLocaleDateString()}</td>
-                          <td>${(pedido.total || 0).toLocaleString('es-CL')}</td>
+                          <td className="fw-bold">#{pedido.id}</td>
+                          <td>{pedido.fecha}</td>
+                          <td className="text-primary fw-bold">
+                            ${(pedido.total || 0).toLocaleString('es-CL')}
+                          </td>
                           <td><Badge bg="success">Entregado</Badge></td>
                         </tr>
                       ))}
