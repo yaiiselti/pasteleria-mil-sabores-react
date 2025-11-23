@@ -1,6 +1,8 @@
 import { createContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { IProducto } from "../services/PasteleriaService";
+// 1. Importamos el Auth para saber quién está comprando
+import { useAuth } from "./AuthContext";
 
 export interface IItemCarrito extends IProducto {
   idUnico: number;
@@ -13,7 +15,6 @@ interface CarritoContextType {
   agregarAlCarrito: (producto: IProducto, cantidad: number, mensaje: string) => void;
   eliminarDelCarrito: (idUnico: number) => void;
   actualizarCantidad: (idUnico: number, nuevaCantidad: number) => void;
-  // 1. NUEVA FUNCIÓN
   actualizarMensaje: (idUnico: number, nuevoMensaje: string) => void;
   vaciarCarrito: () => void;
   totalItems: number;
@@ -27,20 +28,52 @@ interface Props {
 }
 
 export const CarritoProvider = ({ children }: Props) => {
-  
-  const [items, setItems] = useState<IItemCarrito[]>(() => {
-    try {
-      const itemsGuardados = localStorage.getItem('carrito');
-      return itemsGuardados ? JSON.parse(itemsGuardados) : [];
-    } catch (error) {
-      console.error("Error al leer localStorage:", error);
-      return [];
-    }
-  });
+  const { user } = useAuth(); // Obtenemos el usuario actual
+  const [items, setItems] = useState<IItemCarrito[]>([]);
 
+  // --- LÓGICA INTELIGENTE DE ALMACENAMIENTO ---
+  
+  // Función auxiliar para saber dónde guardar/leer
+  const getStorageConfig = () => {
+    if (user) {
+      // USUARIO: Guardamos en localStorage (Permanente) con su email
+      return {
+        storage: localStorage,
+        key: `carrito_usuario_${user.email}`
+      };
+    } else {
+      // INVITADO: Guardamos en sessionStorage (Temporal / Tiempo límite)
+      return {
+        storage: sessionStorage,
+        key: 'carrito_invitado'
+      };
+    }
+  };
+
+  // 1. CARGAR CARRITO: Se ejecuta cuando cambia el usuario (Login/Logout)
   useEffect(() => {
-    localStorage.setItem('carrito', JSON.stringify(items));
-  }, [items]);
+    const { storage, key } = getStorageConfig();
+    try {
+      const guardado = storage.getItem(key);
+      if (guardado) {
+        setItems(JSON.parse(guardado));
+      } else {
+        setItems([]); // Si es un usuario nuevo o invitado nuevo, empezamos vacíos
+      }
+    } catch (error) {
+      console.error("Error al cargar el carrito", error);
+      setItems([]);
+    }
+  }, [user]); // <- Dependencia clave: si cambia 'user', recargamos.
+
+  // 2. GUARDAR CARRITO: Se ejecuta cada vez que modificamos los productos
+  useEffect(() => {
+    const { storage, key } = getStorageConfig();
+    storage.setItem(key, JSON.stringify(items));
+  }, [items, user]);
+
+
+  // --- FUNCIONES DEL CARRITO (Se mantienen igual) ---
 
   const agregarAlCarrito = (producto: IProducto, cantidad: number, mensaje: string) => {
     const mensajeNormalizado = mensaje.trim();
@@ -83,7 +116,6 @@ export const CarritoProvider = ({ children }: Props) => {
     );
   };
 
-  // 2. IMPLEMENTACIÓN DE LA NUEVA FUNCIÓN
   const actualizarMensaje = (idUnico: number, nuevoMensaje: string) => {
     setItems(prevItems => 
       prevItems.map(item => 
@@ -105,7 +137,7 @@ export const CarritoProvider = ({ children }: Props) => {
       agregarAlCarrito,
       eliminarDelCarrito,
       actualizarCantidad,
-      actualizarMensaje, // <--- Exportamos la función
+      actualizarMensaje,
       vaciarCarrito,
       totalItems,
       totalPrecio

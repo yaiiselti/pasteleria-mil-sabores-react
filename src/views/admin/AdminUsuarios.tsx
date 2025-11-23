@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, ButtonGroup, Form, Alert, Badge } from 'react-bootstrap';
+import { Table, Button, Form, Alert, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { getUsuarios, deleteUsuario} from '../../services/PasteleriaService';
 import type { IUsuario } from '../../services/PasteleriaService';
@@ -81,14 +81,27 @@ function AdminUsuarios() {
                   </Badge>
                 </td>
                 <td>
-                  <ButtonGroup size="sm">
-                    <Link to={`/admin/usuarios/editar/${u.run}`} className="btn btn-outline-primary">
-                      <i className="fa-solid fa-pen"></i>
+                  <div className="d-flex gap-2">
+                    
+                    <Link 
+                      to={`/admin/usuarios/editar/${u.run}`} 
+                      className="btn btn-outline-primary btn-sm px-3"
+                      title="Editar Usuario"
+                    >
+                      <i className="fa-solid fa-pen me-1"></i> Editar
                     </Link>
-                    <Button variant="outline-danger" onClick={() => handleDeleteClick(u)}>
-                      <i className="fa-solid fa-trash"></i>
+                    
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm" 
+                      className="px-3"
+                      onClick={() => handleDeleteClick(u)}
+                      title="Eliminar Usuario"
+                    >
+                      <i className="fa-solid fa-trash me-1"></i> Eliminar
                     </Button>
-                  </ButtonGroup>
+                    
+                  </div>
                 </td>
               </tr>
             ))}

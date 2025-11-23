@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, ButtonGroup, Form, Alert } from 'react-bootstrap';
+import { Table, Button, Form, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { getProductos, deleteProducto } from '../../services/PasteleriaService';
 import type { IProducto } from '../../services/PasteleriaService';
@@ -8,7 +8,7 @@ import ModalConfirmacion from '../../components/ModalConfirmacion';
 function AdminProductos() {
   const [productos, setProductos] = useState<IProducto[]>([]);
   const [filtro, setFiltro] = useState('');
-  
+
   // Estado para el Modal (Estilo "Serio" para admin)
   const [showModal, setShowModal] = useState(false);
   const [productoAEliminar, setProductoAEliminar] = useState<IProducto | null>(null);
@@ -24,8 +24,8 @@ function AdminProductos() {
   }, []);
 
   // Filtrado en tiempo real
-  const productosFiltrados = productos.filter(p => 
-    p.nombre.toLowerCase().includes(filtro.toLowerCase()) || 
+  const productosFiltrados = productos.filter(p =>
+    p.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
     p.codigo.toLowerCase().includes(filtro.toLowerCase())
   );
 
@@ -53,9 +53,9 @@ function AdminProductos() {
       </div>
 
       <Form.Group className="mb-4">
-        <Form.Control 
-          type="text" 
-          placeholder="Buscar por nombre o código..." 
+        <Form.Control
+          type="text"
+          placeholder="Buscar por nombre o código..."
           value={filtro}
           onChange={(e) => setFiltro(e.target.value)}
         />
@@ -84,14 +84,27 @@ function AdminProductos() {
                 <td><span className="badge bg-secondary">{p.categoria}</span></td>
                 <td>${p.precio.toLocaleString('es-CL')}</td>
                 <td>
-                  <ButtonGroup size="sm">
-                    <Link to={`/admin/productos/editar/${p.codigo}`} className="btn btn-outline-primary">
-                      <i className="fa-solid fa-pen"></i>
+                  <div className="d-flex gap-2"> {/* Usamos flexbox con gap para separar */}
+                    
+                    <Link 
+                      to={`/admin/productos/editar/${p.codigo}`} 
+                      className="btn btn-outline-primary btn-sm px-3" // px-3 los hace más anchos
+                      title="Editar"
+                    >
+                      <i className="fa-solid fa-pen me-1"></i> Editar
                     </Link>
-                    <Button variant="outline-danger" onClick={() => handleDeleteClick(p)}>
-                      <i className="fa-solid fa-trash"></i>
+                    
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm" 
+                      className="px-3"
+                      onClick={() => handleDeleteClick(p)}
+                      title="Eliminar"
+                    >
+                      <i className="fa-solid fa-trash me-1"></i> Eliminar
                     </Button>
-                  </ButtonGroup>
+                    
+                  </div>
                 </td>
               </tr>
             ))}
@@ -116,7 +129,7 @@ function AdminProductos() {
         <Alert variant="danger" className="text-center mb-0">
           <i className="fa-solid fa-triangle-exclamation fa-2x mb-2 d-block"></i>
           ¿Estás seguro de eliminar <strong>{productoAEliminar?.nombre}</strong>?
-          <br/>
+          <br />
           Esta acción no se puede deshacer.
         </Alert>
       </ModalConfirmacion>

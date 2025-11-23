@@ -311,7 +311,7 @@ export interface IUsuario {
   apellidos: string;
   email: string;
   password?: string; // <--- NUEVO (Opcional para no romper datos viejos, pero idealmente obligatorio)
-  tipo: 'Cliente' | 'Administrador' | 'Vendedor';
+  tipo: 'Cliente' | 'Administrador';
   region?: string;
   comuna?: string;
 }
@@ -406,4 +406,86 @@ export const saveUsuario = async (usuario: IUsuario): Promise<void> => {
   }
   
   guardarUsuariosBD(usuarios);
+};
+
+
+// 1. NUEVA INTERFAZ: RESEÑA
+export interface IResena {
+  id: number;
+  codigoProducto: string;
+  emailUsuario: string;
+  nombreUsuario: string;
+  calificacion: number; // 1 a 5
+  comentario: string;
+  fecha: string;
+}
+
+// 2. DATOS INICIALES (Para que se vea movimiento)
+const resenasIniciales: IResena[] = [
+  {
+    id: 1,
+    codigoProducto: "TC001", // Torta de Chocolate
+    emailUsuario: "ana.gonzalez@duoc.cl",
+    nombreUsuario: "Ana",
+    calificacion: 5,
+    comentario: "¡La mejor torta que he probado! Muy húmeda.",
+    fecha: "2024-05-10"
+  },
+  {
+    id: 2,
+    codigoProducto: "TC001",
+    emailUsuario: "carlos.perez@gmail.com",
+    nombreUsuario: "Carlos",
+    calificacion: 4,
+    comentario: "Estaba rica, pero el envío demoró un poco.",
+    fecha: "2024-05-12"
+  }
+];
+
+const KEY_RESENAS = 'resenasDB';
+
+// --- LÓGICA DE PERSISTENCIA (RESEÑAS) ---
+const cargarResenasBD = (): IResena[] => {
+  try {
+    const guardado = localStorage.getItem(KEY_RESENAS);
+    return guardado ? JSON.parse(guardado) : resenasIniciales;
+  } catch { return resenasIniciales; }
+};
+
+const guardarResenasBD = (datos: IResena[]) => {
+  localStorage.setItem(KEY_RESENAS, JSON.stringify(datos));
+};
+
+// --- FUNCIONES CRUD RESEÑAS ---
+
+// Obtener todas (Para el Admin)
+export const getAllResenas = async (): Promise<IResena[]> => {
+  await new Promise(r => setTimeout(r, 300));
+  return cargarResenasBD();
+};
+
+// Obtener solo las de un producto específico (Para la Tienda)
+export const getResenasPorProducto = async (codigoProducto: string): Promise<IResena[]> => {
+  await new Promise(r => setTimeout(r, 300));
+  const todas = cargarResenasBD();
+  return todas.filter(r => r.codigoProducto === codigoProducto);
+};
+
+// Guardar una nueva reseña
+export const saveResena = async (nuevaResena: Omit<IResena, 'id'>): Promise<void> => {
+  await new Promise(r => setTimeout(r, 500));
+  let lista = cargarResenasBD();
+  
+  // Creamos un ID simple basado en timestamp
+  const resenaConId: IResena = { ...nuevaResena, id: Date.now() };
+  
+  lista.push(resenaConId);
+  guardarResenasBD(lista);
+};
+
+// Eliminar reseña (Para el Admin)
+export const deleteResena = async (id: number): Promise<void> => {
+  await new Promise(r => setTimeout(r, 500));
+  let lista = cargarResenasBD();
+  guardarResenasBD(lista.filter(r => r.id !== id));
 };

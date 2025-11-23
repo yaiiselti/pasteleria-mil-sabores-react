@@ -65,8 +65,7 @@ function Header() {
             ) : (
               <NavDropdown 
                 title={
-                  // Usamos el color chocolate directamente para asegurar el estilo "natural"
-                  <span className=" " style={{ color: '#8B4513', fontSize: '1.1rem' }}>
+                  <span style={{ color: '#8B4513', fontSize: '1.1rem' }}>
                     Hola, {user?.nombre}
                   </span>
                 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, ListGroup, Spinner, Accordion } from 'react-bootstrap';
+// 1. Importamos Pagination
+import { Container, Row, Col, Card, Form, ListGroup, Spinner, Accordion, Pagination } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { getProductos, getCategorias } from '../services/PasteleriaService';
 import type { IProducto } from '../services/PasteleriaService';
@@ -13,6 +14,10 @@ function Tienda() {
   const [filtroBusqueda, setFiltroBusqueda] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('todos');
   const [loading, setLoading] = useState(true);
+
+  // --- 2. ESTADOS PARA LA PAGINACIÓN ---
+  const [paginaActual, setPaginaActual] = useState(1);
+  const productosPorPagina = 6; // Puedes cambiar este número (ej: 9, 12)
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -36,24 +41,30 @@ function Tienda() {
   }, []);
 
   useEffect(() => {
-    let productosFiltradosTemp = productosDB;
+    let temp = productosDB;
 
     if (filtroCategoria !== 'todos') {
-      productosFiltradosTemp = productosFiltradosTemp.filter(
-        producto => producto.categoria === filtroCategoria
-      );
+      temp = temp.filter(p => p.categoria === filtroCategoria);
     }
 
     if (filtroBusqueda !== '') {
-      productosFiltradosTemp = productosFiltradosTemp.filter(
-        producto => producto.nombre.toLowerCase().includes(filtroBusqueda.toLowerCase())
-      );
+      temp = temp.filter(p => p.nombre.toLowerCase().includes(filtroBusqueda.toLowerCase()));
     }
 
-    setProductosFiltrados(productosFiltradosTemp);
+    setProductosFiltrados(temp);
+    setPaginaActual(1); // Volver a la página 1 si se aplica un filtro
   }, [filtroBusqueda, filtroCategoria, productosDB]);
 
-  // --- 1. SEPARAMOS EL BUSCADOR ---
+  // --- 3. CÁLCULO DE PAGINACIÓN ---
+  const indiceUltimoProducto = paginaActual * productosPorPagina;
+  const indicePrimerProducto = indiceUltimoProducto - productosPorPagina;
+  // Obtenemos solo los productos de la página actual
+  const productosVisibles = productosFiltrados.slice(indicePrimerProducto, indiceUltimoProducto);
+  
+  // Calculamos el total de páginas
+  const totalPaginas = Math.ceil(productosFiltrados.length / productosPorPagina);
+
+  // --- COMPONENTES JSX (Tu estructura actual) ---
   const buscadorJSX = (
     <Form.Group className="mb-4">
       <Form.Label className="filter-title">Búsqueda</Form.Label>
@@ -66,7 +77,6 @@ function Tienda() {
     </Form.Group>
   );
 
-  // --- 2. SEPARAMOS LAS CATEGORÍAS ---
   const categoriasJSX = (
     <Form.Group>
       <Form.Label className="filter-title d-none d-md-block">Categoría</Form.Label>
@@ -105,36 +115,25 @@ function Tienda() {
 
       <Row>
         
-        {/* --- COLUMNA DE FILTROS --- */}
+        {/* COLUMNA FILTROS (Tu diseño responsivo) */}
         <Col md={3} className="mb-4 mb-md-0">
-          
-          {/* A. VERSIÓN MÓVIL (Separada) */}
           <div className="d-md-none">
-            {/* 1. Buscador SIEMPRE visible arriba */}
-            <div className="mb-3">
-              {buscadorJSX}
-            </div>
-
-            {/* 2. Categorías ESCONDIDAS en Acordeón abajo */}
+            <div className="mb-3">{buscadorJSX}</div>
             <Accordion>
               <Accordion.Item eventKey="0">
                 <Accordion.Header>Filtrar por Categoría</Accordion.Header>
-                <Accordion.Body>
-                  {categoriasJSX}
-                </Accordion.Body>
+                <Accordion.Body>{categoriasJSX}</Accordion.Body>
               </Accordion.Item>
             </Accordion>
           </div>
 
-          {/* B. VERSIÓN ESCRITORIO (Todo junto y fijo) */}
           <div className="d-none d-md-block store-filters">
             {buscadorJSX}
             {categoriasJSX}
           </div>
-
         </Col>
 
-        {/* --- COLUMNA DE PRODUCTOS --- */}
+        {/* COLUMNA PRODUCTOS */}
         <Col md={9}>
           {loading ? (
             <div className="text-center py-5">
@@ -142,33 +141,71 @@ function Tienda() {
               <p className="mt-2">Cargando productos...</p>
             </div>
           ) : (
-            <Row xs={1} md={2} lg={3} className="g-4">
-              {productosFiltrados.map((producto) => (
-                <Col key={producto.codigo}>
-                  <Card className="product-card h-100">
-                    <Card.Img 
-                      variant="top" 
-                      src={producto.imagenes[0]} 
-                      className="product-card-img"
-                    />
-                    <Card.Body className="d-flex flex-column">
-                      <Card.Title>
-                        <Link to={`/producto/${producto.codigo}`} className="card-stretched-link">
-                          {producto.nombre}
+            <>
+              {/* 4. MOSTRAMOS LOS PRODUCTOS "PAGINADOS" */}
+              <Row xs={1} md={2} lg={3} className="g-4">
+                {productosVisibles.map((producto) => (
+                  <Col key={producto.codigo}>
+                    <Card className="product-card h-100">
+                      <Card.Img 
+                        variant="top" 
+                        src={producto.imagenes[0]} 
+                        className="product-card-img"
+                      />
+                      <Card.Body className="d-flex flex-column">
+                        <Card.Title>
+                          <Link to={`/producto/${producto.codigo}`} className="card-stretched-link">
+                            {producto.nombre}
+                          </Link>
+                        </Card.Title>
+                        <Card.Text>${producto.precio.toLocaleString('es-CL')}</Card.Text>
+                        <Link
+                          to={`/producto/${producto.codigo}`} 
+                          className="btn btn-outline-primary btn-secundario mt-auto"
+                        >
+                          Ver detalle
                         </Link>
-                      </Card.Title>
-                      <Card.Text>${producto.precio.toLocaleString('es-CL')}</Card.Text>
-                      <Link
-                        to={`/producto/${producto.codigo}`} 
-                        className="btn btn-outline-primary btn-secundario mt-auto"
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+              
+              {/* Si no hay productos */}
+              {productosVisibles.length === 0 && (
+                <div className="text-center py-5 text-muted">
+                  <p>No se encontraron productos con esos filtros.</p>
+                </div>
+              )}
+
+              {/* 5. BARRA DE PAGINACIÓN (Solo si hay más de 1 página) */}
+              {totalPaginas > 1 && (
+                <div className="d-flex justify-content-center mt-5">
+                  <Pagination>
+                    <Pagination.Prev 
+                      onClick={() => setPaginaActual(prev => Math.max(prev - 1, 1))}
+                      disabled={paginaActual === 1}
+                    />
+                    
+                    {/* Generamos los números de página dinámicamente */}
+                    {[...Array(totalPaginas)].map((_, idx) => (
+                      <Pagination.Item 
+                        key={idx + 1} 
+                        active={idx + 1 === paginaActual}
+                        onClick={() => setPaginaActual(idx + 1)}
                       >
-                        Ver detalle
-                      </Link>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
+                        {idx + 1}
+                      </Pagination.Item>
+                    ))}
+
+                    <Pagination.Next 
+                      onClick={() => setPaginaActual(prev => Math.min(prev + 1, totalPaginas))}
+                      disabled={paginaActual === totalPaginas}
+                    />
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </Col>
 

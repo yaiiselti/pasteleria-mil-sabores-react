@@ -1,12 +1,11 @@
-import { createContext, useState, useContext,  useEffect } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import type{ ReactNode } from 'react';
 import { getUsuarios } from '../services/PasteleriaService';
 
-// Definimos qué datos tendrá nuestro usuario en sesión
 interface UserSession {
   email: string;
   nombre: string;
-  rol: 'Cliente' | 'Administrador' | 'Vendedor';
+  rol: 'Cliente' | 'Administrador' ;
 }
 
 interface AuthContextType {
@@ -14,63 +13,67 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
+  updateUserSession: (newData: Partial<UserSession>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<UserSession | null>(null);
-
-  // Al cargar, revisamos si ya había alguien logueado en localStorage
-  useEffect(() => {
-    const storedUser = localStorage.getItem('usuarioSesion');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  
+  const [user, setUser] = useState<UserSession | null>(() => {
+    try {
+      const storedUser = localStorage.getItem('usuarioSesion');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (error) {
+      console.error("Error al leer sesión:", error);
+      return null;
     }
-  }, []);
+  });
+
+  
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('usuarioSesion', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('usuarioSesion');
+    }
+  }, [user]);
 
   const login = async (email: string, password: string) => {
-    // 1. Obtenemos los usuarios "reales" del servicio
     const usuarios = await getUsuarios();
-    
-    // 2. Buscamos si el correo existe
     const usuarioEncontrado = usuarios.find(u => u.email.toLowerCase() === email.toLowerCase());
 
-    // 3. Regla especial para el Admin (Respaldo por si acaso)
     if (email === 'admin@duoc.cl' && password === 'admin') {
        const adminUser: UserSession = { email, nombre: 'Administrador', rol: 'Administrador' };
-       guardarSesion(adminUser);
+       setUser(adminUser); // Actualizamos estado (el useEffect guardará en localStorage)
        return { success: true, message: 'Bienvenido Admin' };
     }
 
     if (usuarioEncontrado) {
-        // --- AQUÍ AGREGAMOS LA VALIDACIÓN DE CONTRASEÑA ---
         if (usuarioEncontrado.password === password) {
-            // Contraseña correcta: Login Exitoso
             const sessionData: UserSession = {
                 email: usuarioEncontrado.email,
                 nombre: usuarioEncontrado.nombre,
                 rol: usuarioEncontrado.tipo
             };
-            guardarSesion(sessionData);
+            setUser(sessionData); // Actualizamos estado
             return { success: true, message: `Bienvenido ${usuarioEncontrado.nombre}` };
         } else {
-            // Contraseña incorrecta
             return { success: false, message: 'Contraseña incorrecta' };
         }
     }
-
     return { success: false, message: 'Usuario no encontrado' };
   };
 
-  const guardarSesion = (userData: UserSession) => {
-    setUser(userData);
-    localStorage.setItem('usuarioSesion', JSON.stringify(userData));
+  const updateUserSession = (newData: Partial<UserSession>) => {
+    if (user) {
+      // Al hacer setUser, el useEffect de arriba se encargará de guardar en localStorage
+      setUser({ ...user, ...newData });
+    }
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('usuarioSesion');
+    setUser(null); // Esto disparará el useEffect que hace removeItem
   };
 
   return (
@@ -78,15 +81,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       user, 
       isAuthenticated: !!user, 
       login, 
-      logout 
+      logout,
+      updateUserSession 
     }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// --- IMPORTANTE: ESTA ES LA EXPORTACIÓN QUE FALTABA ---
-// Hook personalizado
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

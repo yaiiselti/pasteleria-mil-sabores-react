@@ -54,7 +54,7 @@ function AdminUsuarioForm() {
             <Row className="g-3">
               <Col md={6}>
                 <Form.Group controlId="run">
-                  <Form.Label>RUN</Form.Label>
+                  <Form.Label>Run</Form.Label>
                   <Form.Control 
                     type="text" 
                     name="run" 
@@ -72,7 +72,6 @@ function AdminUsuarioForm() {
                   <Form.Label>Tipo de Usuario</Form.Label>
                   <Form.Select name="tipo" value={formData.tipo} onChange={handleChange}>
                     <option value="Cliente">Cliente</option>
-                    <option value="Vendedor">Vendedor</option>
                     <option value="Administrador">Administrador</option>
                   </Form.Select>
                 </Form.Group>

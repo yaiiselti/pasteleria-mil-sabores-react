@@ -4,12 +4,12 @@ import { Link } from 'react-router-dom';
 function BlogArticulo1() {
   return (
     <Container className="py-5">
-      {/* Reutilizamos el .content-container que ya está en index.css */}
+
       <div className="content-container">
         
         <h2>Caso Curioso #1</h2>
         
-        {/* Usamos 'img-fluid' de Bootstrap para que la imagen sea responsiva */}
+
         <img 
           src="/assets/img/record-guinness.png" 
           alt="Caso curioso 1" 

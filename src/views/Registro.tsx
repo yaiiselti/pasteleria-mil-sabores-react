@@ -151,6 +151,28 @@ function Registro() {
                         </Form.Group>
                     </Col>
                   </Row>
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Región</Form.Label>
+                        <Form.Control 
+                          name="region" 
+                          placeholder="Ej: Metropolitana" 
+                          onChange={handleChange} 
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Comuna</Form.Label>
+                        <Form.Control 
+                          name="comuna" 
+                          placeholder="Ej: Santiago" 
+                          onChange={handleChange} 
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
                   <Form.Group className="mb-3">
                     <Form.Label>Código Promo</Form.Label>
                     <Form.Control name="codigoPromo" placeholder="Opcional" onChange={handleChange} />

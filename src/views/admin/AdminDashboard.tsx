@@ -1,41 +1,108 @@
+import { useState, useEffect } from 'react';
 import { Row, Col, Card } from 'react-bootstrap';
+import { Link } from 'react-router-dom'; // Importamos Link para navegar
+import { getProductos, getUsuarios, getAllResenas } from '../../services/PasteleriaService';
 
 function AdminDashboard() {
+  // Estados para guardar los conteos reales
+  const [totalProductos, setTotalProductos] = useState(0);
+  const [totalUsuarios, setTotalUsuarios] = useState(0);
+  const [totalResenas, setTotalResenas] = useState(0);
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    const cargarDatos = async () => {
+      const prods = await getProductos();
+      const users = await getUsuarios();
+      const reviews = await getAllResenas();
+      setTotalProductos(prods.length);
+      setTotalUsuarios(users.length);
+      setTotalResenas(reviews.length);
+    };
+    cargarDatos();
+  }, []);
+
   return (
     <div>
-      <h2 className="logo-text mb-4">Dashboard</h2>
-      <p className="text-muted">Resumen de las actividades de la tienda.</p>
+      <h2 className="logo-text mb-4">Panel de Control</h2>
+      <p className="text-muted mb-5">Bienvenido al sistema de gestión de Pastelería Mil Sabores.</p>
 
       <Row className="g-4">
-        {/* Tarjeta 1 */}
+
+        {/* TARJETA 1: PRODUCTOS (Azul) */}
         <Col md={4}>
-          <Card className="border-0 shadow-sm text-white bg-primary h-100">
-            <Card.Body className="d-flex flex-column justify-content-center align-items-center">
-              <h1 className="display-4 fw-bold">16</h1>
-              <p className="mb-0 fs-5">Productos Totales</p>
+          <Card
+            as={Link}
+            to="/admin/productos"
+            className="border-0 shadow-sm text-white bg-primary h-100 text-decoration-none transform-hover"
+            style={{ transition: 'transform 0.2s' }}
+          >
+            <Card.Body className="d-flex flex-column justify-content-center align-items-center py-5">
+              <i className="fa-solid fa-box-open fa-3x mb-3 opacity-75"></i>
+              <h1 className="display-4 fw-bold mb-0">{totalProductos}</h1>
+              <p className="mb-0 fs-5 text-white-50">Productos Activos</p>
+              <span className="mt-3 btn btn-light btn-sm rounded-pill px-3 text-primary fw-bold">
+                Gestionar <i className="fa-solid fa-arrow-right ms-1"></i>
+              </span>
             </Card.Body>
           </Card>
         </Col>
 
-        {/* Tarjeta 2 */}
+        {/* TARJETA 2: USUARIOS (Verde) */}
         <Col md={4}>
-          <Card className="border-0 shadow-sm text-white bg-success h-100">
-            <Card.Body className="d-flex flex-column justify-content-center align-items-center">
-              <h1 className="display-4 fw-bold">3</h1>
-              <p className="mb-0 fs-5">Usuarios Registrados</p>
+          <Card
+            as={Link}
+            to="/admin/usuarios"
+            className="border-0 shadow-sm text-white bg-success h-100 text-decoration-none"
+            style={{ transition: 'transform 0.2s' }}
+          >
+            <Card.Body className="d-flex flex-column justify-content-center align-items-center py-5">
+              <i className="fa-solid fa-users fa-3x mb-3 opacity-75"></i>
+              <h1 className="display-4 fw-bold mb-0">{totalUsuarios}</h1>
+              <p className="mb-0 fs-5 text-white-50">Usuarios Registrados</p>
+              <span className="mt-3 btn btn-light btn-sm rounded-pill px-3 text-success fw-bold">
+                Gestionar <i className="fa-solid fa-arrow-right ms-1"></i>
+              </span>
             </Card.Body>
           </Card>
         </Col>
 
-        {/* Tarjeta 3 */}
         <Col md={4}>
-          <Card className="border-0 shadow-sm text-white bg-warning h-100">
-            <Card.Body className="d-flex flex-column justify-content-center align-items-center">
-              <h1 className="display-4 fw-bold text-dark">$400k</h1>
-              <p className="mb-0 fs-5 text-dark">Ventas del Mes</p>
+          <Card
+            as={Link}
+            to="/admin/resenas"
+            className="border-0 shadow-sm text-white bg-info h-100 text-decoration-none"
+            style={{ transition: 'transform 0.2s' }}
+          >
+            <Card.Body className="d-flex flex-column justify-content-center align-items-center py-5">
+              <i className="fa-solid fa-star fa-3x mb-3 text-white opacity-75"></i>
+              <h1 className="display-4 fw-bold mb-0">{totalResenas}</h1>
+              <p className="mb-0 fs-5 text-white-50">Reseñas</p>
+              <span className="mt-3 btn btn-light btn-sm rounded-pill px-3 text-info fw-bold">
+                Gestionar <i className="fa-solid fa-arrow-right ms-1"></i>
+              </span>
             </Card.Body>
           </Card>
         </Col>
+
+        <Col md={4}>
+          <Card
+            as={Link}
+            to="/"
+            className="border-0 shadow-sm text-white bg-warning h-100 text-decoration-none"
+            style={{ transition: 'transform 0.2s' }}
+          >
+            <Card.Body className="d-flex flex-column justify-content-center align-items-center py-5">
+              <i className="fa-solid fa-shop fa-3x mb-3 opacity-75 text-dark"></i>
+              <h1 className="display-4 fw-bold mb-0 text-dark">Tienda</h1>
+              <p className="mb-0 fs-5 text-dark opacity-75">Ver Vista Cliente</p>
+              <span className="mt-3 btn btn-dark btn-sm rounded-pill px-3 fw-bold">
+                Ir Ahora <i className="fa-solid fa-arrow-up-right-from-square ms-1"></i>
+              </span>
+            </Card.Body>
+          </Card>
+        </Col>
+
       </Row>
     </div>
   );

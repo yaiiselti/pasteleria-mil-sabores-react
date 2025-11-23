@@ -380,3 +380,43 @@ body {
     max-width: 250px; 
   }
 }
+
+/* --- PERSONALIZACIÓN DE PAGINACIÓN (Estilo Pastelería) --- */
+
+/* 1. Estado Normal de los links (Números y flechas) */
+.pagination .page-item .page-link {
+    color: #8B4513 !important; /* Color marrón chocolate */
+    background-color: transparent !important;
+    border: 1px solid #e9ecef !important;
+    margin: 0 3px; /* Un pequeño espacio entre botones */
+    border-radius: 8px; /* Bordes más redondeados y suaves */
+    transition: all 0.3s ease;
+}
+
+/* 2. Estado Hover (Cuando pasas el mouse por encima) */
+.pagination .page-item .page-link:hover {
+    color: #d9832e !important; /* Color naranja pastel al pasar el mouse */
+    background-color: #fff3e0 !important; /* Fondo crema muy clarito */
+    border-color: #d9832e !important;
+}
+
+/* 3. Estado Activo (La página en la que estás actualmente) */
+.pagination .page-item.active .page-link {
+    background-color: #d9832e !important; /* Fondo naranja pastel fuerte */
+    border-color: #d9832e !important;
+    color: white !important; /* Texto blanco para contraste */
+    font-weight: bold;
+}
+
+/* 4. Estado Deshabilitado (Flechas cuando no se pueden usar) */
+.pagination .page-item.disabled .page-link {
+    color: #ccc !important; /* Gris claro */
+    background-color: transparent !important;
+    border-color: #e9ecef !important;
+    opacity: 0.6;
+}
+
+/* Quitar el recuadro azul feo que sale al hacer clic */
+.pagination .page-link:focus {
+    box-shadow: none !important;
+}

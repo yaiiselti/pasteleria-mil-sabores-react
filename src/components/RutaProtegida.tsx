@@ -8,17 +8,17 @@ interface Props {
 const RutaProtegida = ({ soloAdmin = false }: Props) => {
   const { user, isAuthenticated } = useAuth();
 
-  // 1. Si no está logueado -> Al Login
+  // 1. Si no ha iniciado sesión, lo mandamos al Login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // 2. Si requiere Admin y NO es Admin -> Al Home (o página de acceso denegado)
+  // 2. Si la ruta es solo para Admin y el usuario NO lo es, lo mandamos al Home
   if (soloAdmin && user?.rol !== 'Administrador') {
     return <Navigate to="/" replace />;
   }
 
-  // 3. Si pasa las reglas -> Muestra el contenido
+  // 3. Si cumple todo, lo dejamos pasar (Outlet muestra el contenido hijo)
   return <Outlet />;
 };
 
