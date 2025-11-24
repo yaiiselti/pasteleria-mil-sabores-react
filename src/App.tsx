@@ -69,15 +69,11 @@ function App() {
           <Route path="/blog-articulo-2" element={<BlogArticulo2 />} />
           <Route path="/contacto" element={<Contacto />} />
 
-          {/* RUTA PROTEGIDA CLIENTE (Perfil) */}
-          {/* Solo deja entrar si estás logueado */}
           <Route element={<RutaProtegida />}>
              <Route path="/perfil" element={<Perfil />} />
           </Route>
         </Route>
 
-        {/* --- ZONA ADMIN (PROTEGIDA) --- */}
-        {/* Solo deja entrar si eres Administrador. NO usa PublicLayout (tiene su propio AdminLayout) */}
         <Route element={<RutaProtegida soloAdmin={true} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
