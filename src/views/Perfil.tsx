@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Container, Card, Row, Col, Badge, Table, Button, Modal, Form } from 'react-bootstrap';
+import { useState, useEffect } from 'react';
+import { Container, Card, Row, Col, Badge, Table, Button, Modal, Form, Alert } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
@@ -10,35 +10,43 @@ function Perfil() {
   const { user, logout, updateUserSession } = useAuth();
   const { showNotification } = useNotification();
 
-  // Estados para el Modal de Edición
   const [showModal, setShowModal] = useState(false);
   const [datosEditables, setDatosEditables] = useState({
     nombre: '',
     apellidos: '',
-    email: '', 
-    run: '',   
-    password: '' 
+    email: '',
+    run: '',
+    password: ''
   });
 
-  // --- LÓGICA DE HISTORIAL POR USUARIO ---
+  // --- 1. LÓGICA DE BENEFICIOS ---
+  const calcularEdad = (fecha?: string) => {
+    if (!fecha) return 0;
+    const hoy = new Date();
+    const cumple = new Date(fecha);
+    let edad = hoy.getFullYear() - cumple.getFullYear();
+    const m = hoy.getMonth() - cumple.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) {
+      edad--;
+    }
+    return edad;
+  };
+
+  const tieneDescuentoEdad = user?.fechaNacimiento ? calcularEdad(user.fechaNacimiento) >= 50 : false;
+  const tieneDescuentoCodigo = user?.codigoPromo === 'FELICES50';
+  const sinBeneficios = !tieneDescuentoEdad && !tieneDescuentoCodigo;
+  // -------------------------------
+
   const obtenerMisPedidos = () => {
     if (!user) return [];
-    
-    // 1. Leemos todo el historial global
     const historialGlobal = JSON.parse(localStorage.getItem('historialPedidos') || '[]');
-    
-    // 2. Filtramos SOLO los que pertenecen al usuario conectado
-    // (Asumiendo que en el checkout se guardó el email en orden.cliente.email)
     const misPedidos = historialGlobal.filter((orden: any) => 
       orden.cliente.email.toLowerCase() === user.email.toLowerCase()
     );
-    
-    // Ordenamos para ver el más reciente primero
     return misPedidos.reverse();
   };
 
   const pedidos = obtenerMisPedidos();
-  // ---------------------------------------
 
   const handleOpenModal = async () => {
     if (user) {
@@ -62,11 +70,19 @@ function Perfil() {
     try {
       const usuarioActualizado: IUsuario = {
         ...datosEditables,
+        // Mantenemos los datos que no se editan en el modal
+        fechaNacimiento: user?.fechaNacimiento,
+        codigoPromo: user?.codigoPromo,
         tipo: user?.rol === 'Administrador' ? 'Administrador' : 'Cliente'
       };
 
       await saveUsuario(usuarioActualizado);
-      updateUserSession({ nombre: datosEditables.nombre });
+      updateUserSession({ 
+        nombre: datosEditables.nombre, 
+        // Aseguramos que la sesión no pierda estos datos al actualizar
+        fechaNacimiento: user?.fechaNacimiento,
+        codigoPromo: user?.codigoPromo
+      });
 
       showNotification('Perfil actualizado correctamente', 'success');
       setShowModal(false);
@@ -89,9 +105,11 @@ function Perfil() {
       <h2 className="logo-text text-center mb-5">Mi Perfil</h2>
 
       <Row className="g-4">
-        {/* Tarjeta de Datos Personales */}
+        
+        {/* COLUMNA IZQUIERDA: DATOS Y BENEFICIOS */}
         <Col md={4}>
-          <Card className="shadow-sm border-0 h-100">
+          {/* Tarjeta de Datos */}
+          <Card className="shadow-sm border-0 mb-4">
             <Card.Body className="text-center">
               <div className="mb-3">
                 <i className="fa-solid fa-circle-user fa-6x text-secondary"></i>
@@ -104,20 +122,48 @@ function Perfil() {
                 <Button variant="outline-primary" onClick={handleOpenModal}>
                   <i className="fa-solid fa-pen-to-square me-2"></i> Editar Mis Datos
                 </Button>
-                <hr />
                 <Button variant="outline-danger" onClick={logout}>
                   Cerrar Sesión
                 </Button>
               </div>
             </Card.Body>
           </Card>
+
+          {/* 2. NUEVA TARJETA: MIS BENEFICIOS */}
+          <Card className="shadow-sm border-0">
+            <Card.Header className="bg-warning text-dark fw-bold">
+              <i className="fa-solid fa-gift me-2"></i> Mis Beneficios
+            </Card.Header>
+            <Card.Body>
+              {sinBeneficios ? (
+                <p className="text-muted small mb-0 text-center">
+                  No tienes beneficios activos actualmente.
+                </p>
+              ) : (
+                <div className="d-flex flex-column gap-2">
+                  {tieneDescuentoEdad && (
+                    <Alert variant="success" className="mb-0 py-2 small">
+                      <i className="fa-solid fa-cake-candles me-2"></i>
+                      <strong>50% DCTO</strong> (Edad de Oro)
+                    </Alert>
+                  )}
+                  {tieneDescuentoCodigo && (
+                    <Alert variant="info" className="mb-0 py-2 small">
+                      <i className="fa-solid fa-ticket me-2"></i>
+                      <strong>10% DCTO</strong> (Cupón Especial)
+                    </Alert>
+                  )}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
         </Col>
 
-        {/* Tarjeta de Historial de Pedidos */}
+        {/* COLUMNA DERECHA: HISTORIAL */}
         <Col md={8}>
           <Card className="shadow-sm border-0 h-100">
             <Card.Header className="bg-white py-3">
-              <h5 className="mb-0">Mis Pedidos Anteriores</h5>
+              <h5 className="mb-0">Historial de Pedidos</h5>
             </Card.Header>
             <Card.Body>
               {pedidos.length === 0 ? (

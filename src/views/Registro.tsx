@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Container, Row, Col, Form, Button, Card, Alert } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { saveUsuario } from '../services/PasteleriaService';
-import type{ IUsuario } from '../services/PasteleriaService';
+import type { IUsuario } from '../services/PasteleriaService';
+import { REGIONES_CHILE } from '../Data/regiones';
 
 function Registro() {
   const navigate = useNavigate();
@@ -15,15 +16,25 @@ function Registro() {
   });
 
   const [errores, setErrores] = useState<any>({});
-  
-  // --- CAMBIO: Estado para tu aviso personalizado ---
-  const [avisoExito, setAvisoExito] = useState<string | null>(null); 
 
+  // --- CAMBIO: Estado para tu aviso personalizado ---
+  const [avisoExito, setAvisoExito] = useState<string | null>(null);
+
+  // Modificar handleChange igual que en Admin (limpiar comuna al cambiar región)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    setFormData(prev => {
+      if (name === 'region') {
+        return { ...prev, region: value, comuna: '' };
+      }
+      return { ...prev, [name]: value };
+    });
     setErrores((prev: any) => ({ ...prev, [name]: '' }));
   };
+  // Calcular comunas disponibles
+  const comunasDisponibles = REGIONES_CHILE.find(r => r.region === formData.region)?.comunas || [];
+
 
   const validarYRegistrar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +44,7 @@ function Registro() {
     // Validaciones básicas
     if (!formData.run.trim()) { nuevosErrores.run = 'El RUN es obligatorio'; esValido = false; }
     if (!formData.nombre.trim()) { nuevosErrores.nombre = 'El nombre es obligatorio'; esValido = false; }
+    if (!formData.apellidos.trim()) { nuevosErrores.apellidos = 'El apellido es obligatorio'; esValido = false; }
     if (!formData.email.includes('@')) { nuevosErrores.email = 'Correo inválido'; esValido = false; }
     if (formData.password.length < 4) { nuevosErrores.password = 'Mínimo 4 caracteres'; esValido = false; }
     if (formData.password !== formData.confirmPassword) { nuevosErrores.confirmPassword = 'No coinciden'; esValido = false; }
@@ -70,16 +82,18 @@ function Registro() {
           nombre: formData.nombre,
           apellidos: formData.apellidos,
           email: formData.email,
-          password: formData.password, // <--- AGREGAR ESTO (Guardamos la clave)
+          password: formData.password,
           tipo: 'Cliente',
           region: formData.region,
-          comuna: formData.comuna
+          comuna: formData.comuna,
+          fechaNacimiento: formData.fechaNacimiento,
+          codigoPromo: formData.codigoPromo.trim().toUpperCase()
         };
         await saveUsuario(nuevoUsuario);
 
         // --- AQUÍ ESTÁ TU AVISO VISIBLE ---
         setAvisoExito(mensaje); // Muestra el Alert verde
-        
+
         // Esperamos un poco más (3 segundos) para que alcancen a leer
         setTimeout(() => navigate('/login'), 3000);
 
@@ -113,63 +127,85 @@ function Registro() {
                 <Form onSubmit={validarYRegistrar}>
                   {/* ... (Mismos campos de siempre: RUN, Nombre, etc.) ... */}
                   {/* (Copia aquí los mismos Inputs del código anterior para ahorrar espacio) */}
-                   <Row>
+                  <Row>
                     <Col md={6}>
-                        <Form.Group className="mb-3">
+                      <Form.Group className="mb-3">
                         <Form.Label>RUN</Form.Label>
                         <Form.Control name="run" onChange={handleChange} isInvalid={!!errores.run} placeholder="12345678-K" />
                         <Form.Control.Feedback type="invalid">{errores.run}</Form.Control.Feedback>
-                        </Form.Group>
+                      </Form.Group>
                     </Col>
                     <Col md={6}>
-                        <Form.Group className="mb-3">
+                      <Form.Group className="mb-3">
                         <Form.Label>Fecha de Nacimiento</Form.Label>
                         <Form.Control type="date" name="fechaNacimiento" onChange={handleChange} isInvalid={!!errores.fechaNacimiento} />
                         <Form.Control.Feedback type="invalid">{errores.fechaNacimiento}</Form.Control.Feedback>
-                        </Form.Group>
+                      </Form.Group>
                     </Col>
                   </Row>
                   <Form.Group className="mb-3">
                     <Form.Label>Nombre</Form.Label>
                     <Form.Control name="nombre" onChange={handleChange} isInvalid={!!errores.nombre} />
+                    <Form.Control.Feedback type="invalid">{errores.nombre}</Form.Control.Feedback>
                   </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label>Apellidos</Form.Label>
+                    <Form.Control name="apellidos" onChange={handleChange} isInvalid={!!errores.apellidos} />
+                    <Form.Control.Feedback type="invalid">{errores.apellidos}</Form.Control.Feedback>
+                  </Form.Group>
+
                   <Form.Group className="mb-3">
                     <Form.Label>Email</Form.Label>
                     <Form.Control name="email" onChange={handleChange} isInvalid={!!errores.email} />
+                    <Form.Control.Feedback type="invalid">{errores.email}</Form.Control.Feedback>
                   </Form.Group>
                   <Row>
                     <Col md={6}>
-                        <Form.Group className="mb-3">
+                      <Form.Group className="mb-3">
                         <Form.Label>Contraseña</Form.Label>
                         <Form.Control type="password" name="password" onChange={handleChange} isInvalid={!!errores.password} />
-                        </Form.Group>
+                        <Form.Control.Feedback type="invalid">{errores.password}</Form.Control.Feedback>
+                      </Form.Group>
                     </Col>
                     <Col md={6}>
-                        <Form.Group className="mb-3">
+                      <Form.Group className="mb-3">
                         <Form.Label>Confirmar</Form.Label>
                         <Form.Control type="password" name="confirmPassword" onChange={handleChange} isInvalid={!!errores.confirmPassword} />
-                        </Form.Group>
+                        <Form.Control.Feedback type="invalid">{errores.confirmPassword}</Form.Control.Feedback>
+                      </Form.Group>
                     </Col>
                   </Row>
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label>Región</Form.Label>
-                        <Form.Control 
-                          name="region" 
-                          placeholder="Ej: Metropolitana" 
-                          onChange={handleChange} 
-                        />
+                        <Form.Select
+                          name="region"
+                          value={formData.region}
+                          onChange={handleChange}
+                        >
+                          <option value="">Selecciona...</option>
+                          {REGIONES_CHILE.map((reg) => (
+                            <option key={reg.region} value={reg.region}>{reg.region}</option>
+                          ))}
+                        </Form.Select>
                       </Form.Group>
                     </Col>
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label>Comuna</Form.Label>
-                        <Form.Control 
-                          name="comuna" 
-                          placeholder="Ej: Santiago" 
-                          onChange={handleChange} 
-                        />
+                        <Form.Select
+                          name="comuna"
+                          value={formData.comuna}
+                          onChange={handleChange}
+                          disabled={!formData.region}
+                        >
+                          <option value="">Selecciona...</option>
+                          {comunasDisponibles.map((com) => (
+                            <option key={com} value={com}>{com}</option>
+                          ))}
+                        </Form.Select>
                       </Form.Group>
                     </Col>
                   </Row>

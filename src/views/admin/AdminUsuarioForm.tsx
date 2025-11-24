@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Form, Button, Row, Col, Card } from 'react-bootstrap';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-// Asegúrate de que esta ruta sea correcta según tu estructura
+// Importamos servicios y tipos
 import { getUsuarioByRun, saveUsuario } from '../../services/PasteleriaService';
 import type { IUsuario } from '../../services/PasteleriaService';
+// 1. IMPORTAMOS LOS DATOS DE REGIONES (Esta es la clave)
+import { REGIONES_CHILE } from '../../Data/regiones';
 
 function AdminUsuarioForm() {
   const { run } = useParams();
@@ -15,6 +17,7 @@ function AdminUsuarioForm() {
     nombre: '',
     apellidos: '',
     email: '',
+    password: '', 
     tipo: 'Cliente',
     region: '',
     comuna: ''
@@ -26,13 +29,22 @@ function AdminUsuarioForm() {
     }
   }, [run, esEdicion, navigate]);
 
-  // --- AQUÍ ESTÁ EL ARREGLO ---
-  // Agregamos HTMLTextAreaElement para que <Form.Control> no se queje
+  // 2. HANDLECHANGE MODIFICADO PARA LIMPIAR COMUNA
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    setFormData(prev => {
+      if (name === 'region') {
+        // Si cambia la región, la comuna se resetea a vacío
+        return { ...prev, region: value, comuna: '' };
+      }
+      return { ...prev, [name]: value };
+    });
   };
-  // -----------------------------
+
+  // 3. FILTRO DE COMUNAS
+  // Buscamos en la lista REGIONES_CHILE la región seleccionada y sacamos sus comunas
+  const comunasDisponibles = REGIONES_CHILE.find(r => r.region === formData.region)?.comunas || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,12 +66,12 @@ function AdminUsuarioForm() {
             <Row className="g-3">
               <Col md={6}>
                 <Form.Group controlId="run">
-                  <Form.Label>Run</Form.Label>
+                  <Form.Label>RUN</Form.Label>
                   <Form.Control 
                     type="text" 
                     name="run" 
                     value={formData.run} 
-                    onChange={handleChange} // ¡Ahora funcionará!
+                    onChange={handleChange}
                     disabled={esEdicion}
                     required
                     placeholder="12345678-K"
@@ -98,11 +110,11 @@ function AdminUsuarioForm() {
                 </Form.Group>
               </Col>
 
-              <Col md={6}>
-                <Form.Group controlId="password">
+              <Col md={12}>
+                 <Form.Group controlId="password">
                   <Form.Label>Contraseña</Form.Label>
                   <Form.Control 
-                    type="text" // Tipo texto para que el admin la vea y edite fácil
+                    type="text" 
                     name="password" 
                     value={formData.password || ''} 
                     onChange={handleChange} 
@@ -111,18 +123,49 @@ function AdminUsuarioForm() {
                 </Form.Group>
               </Col>
               
+              {/* --- 4. AQUÍ ESTÁ EL CAMBIO VISUAL --- */}
+              {/* Reemplazamos Form.Control (Texto) por Form.Select (Lista) */}
+              
               <Col md={6}>
                 <Form.Group controlId="region">
                   <Form.Label>Región</Form.Label>
-                  <Form.Control type="text" name="region" value={formData.region} onChange={handleChange} />
+                  <Form.Select 
+                    name="region" 
+                    value={formData.region} 
+                    onChange={handleChange}
+                  >
+                    <option value="">Selecciona una región...</option>
+                    {/* Mapeamos la lista importada */}
+                    {REGIONES_CHILE.map((reg) => (
+                      <option key={reg.region} value={reg.region}>
+                        {reg.region}
+                      </option>
+                    ))}
+                  </Form.Select>
                 </Form.Group>
               </Col>
+
               <Col md={6}>
                 <Form.Group controlId="comuna">
                   <Form.Label>Comuna</Form.Label>
-                  <Form.Control type="text" name="comuna" value={formData.comuna} onChange={handleChange} />
+                  <Form.Select 
+                    name="comuna" 
+                    value={formData.comuna} 
+                    onChange={handleChange}
+                    disabled={!formData.region} // Se desactiva si no eliges región
+                  >
+                    <option value="">Selecciona una comuna...</option>
+                    {/* Mapeamos las comunas filtradas */}
+                    {comunasDisponibles.map((com) => (
+                      <option key={com} value={com}>
+                        {com}
+                      </option>
+                    ))}
+                  </Form.Select>
                 </Form.Group>
               </Col>
+              {/* ----------------------------------- */}
+
             </Row>
 
             <div className="d-flex justify-content-end gap-2 mt-4">

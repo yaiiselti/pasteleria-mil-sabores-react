@@ -301,22 +301,21 @@ export const saveProducto = async (producto: IProducto): Promise<void> => {
 
 // ----------------------------------------------------------- datos con usuarios ---------------------------------------------------
 
-// ... (Mantén todo lo de IProducto y sus funciones igual) ...
 
-// 1. NUEVA INTERFAZ PARA USUARIOS
-// 1. Actualizamos la Interfaz
 export interface IUsuario {
   run: string;
   nombre: string;
   apellidos: string;
   email: string;
-  password?: string; // <--- NUEVO (Opcional para no romper datos viejos, pero idealmente obligatorio)
+  password?: string;
   tipo: 'Cliente' | 'Administrador';
   region?: string;
   comuna?: string;
+fechaNacimiento?: string;
+  codigoPromo?: string;
 }
 
-// 2. Actualizamos los datos iniciales con contraseñas
+
 const usuariosIniciales: IUsuario[] = [
   {
     run: "12345678-K",
@@ -424,12 +423,12 @@ export interface IResena {
 const resenasIniciales: IResena[] = [
   {
     id: 1,
-    codigoProducto: "TC001", // Torta de Chocolate
+    codigoProducto: "TC001",
     emailUsuario: "ana.gonzalez@duoc.cl",
-    nombreUsuario: "Ana",
+    nombreUsuario: "Ana González",
     calificacion: 5,
-    comentario: "¡La mejor torta que he probado! Muy húmeda.",
-    fecha: "2024-05-10"
+    comentario: "¡Exquisita! La mejor torta que he probado.",
+    fecha: "10/05/2024"
   },
   {
     id: 2,

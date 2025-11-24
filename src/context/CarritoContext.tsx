@@ -1,7 +1,6 @@
 import { createContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { IProducto } from "../services/PasteleriaService";
-// 1. Importamos el Auth para saber quién está comprando
 import { useAuth } from "./AuthContext";
 
 export interface IItemCarrito extends IProducto {
@@ -19,6 +18,8 @@ interface CarritoContextType {
   vaciarCarrito: () => void;
   totalItems: number;
   totalPrecio: number;
+  subtotal: number;
+  descuentoTotal: number;
 }
 
 export const CarritoContext = createContext<CarritoContextType | undefined>(undefined);
@@ -28,53 +29,79 @@ interface Props {
 }
 
 export const CarritoProvider = ({ children }: Props) => {
-  const { user } = useAuth(); // Obtenemos el usuario actual
-  const [items, setItems] = useState<IItemCarrito[]>([]);
+  const { user } = useAuth();
 
-  // --- LÓGICA INTELIGENTE DE ALMACENAMIENTO ---
-  
-  // Función auxiliar para saber dónde guardar/leer
-  const getStorageConfig = () => {
-    if (user) {
-      // USUARIO: Guardamos en localStorage (Permanente) con su email
+  // Función auxiliar para saber dónde leer/guardar
+  // (La sacamos afuera del efecto para usarla en el estado inicial)
+  const getStorageConfig = (currentUser: any) => {
+    if (currentUser) {
       return {
-        storage: localStorage,
-        key: `carrito_usuario_${user.email}`
+        key: `carrito_${currentUser.email}`, 
+        storage: localStorage         
       };
     } else {
-      // INVITADO: Guardamos en sessionStorage (Temporal / Tiempo límite)
       return {
-        storage: sessionStorage,
-        key: 'carrito_invitado'
+        key: 'carrito_invitado',         
+        storage: sessionStorage       
       };
     }
   };
 
-  // 1. CARGAR CARRITO: Se ejecuta cuando cambia el usuario (Login/Logout)
+  // --- CAMBIO CLAVE: INICIALIZACIÓN PEREZOSA ---
+  // En lugar de empezar con [], leemos el storage AL TIRO.
+  // Esto evita que al refrescar la página se sobrescriba con vacío.
+  const [items, setItems] = useState<IItemCarrito[]>(() => {
+    const { key, storage } = getStorageConfig(user);
+    try {
+      const guardado = storage.getItem(key);
+      return guardado ? JSON.parse(guardado) : [];
+    } catch (error) {
+      return [];
+    }
+  });
+
+  // 1. Efecto para CAMBIAR DE USUARIO (Login/Logout)
+  // Solo se ejecuta si cambia el usuario, para cargar SU carrito específico
   useEffect(() => {
-    const { storage, key } = getStorageConfig();
+    const { key, storage } = getStorageConfig(user);
     try {
       const guardado = storage.getItem(key);
       if (guardado) {
         setItems(JSON.parse(guardado));
       } else {
-        setItems([]); // Si es un usuario nuevo o invitado nuevo, empezamos vacíos
+        // Si el usuario no tiene carrito guardado, empezamos limpio
+        // Opcional: Podrías NO limpiar si quieres "heredar" el carrito de invitado
+        setItems([]); 
       }
     } catch (error) {
-      console.error("Error al cargar el carrito", error);
       setItems([]);
     }
-  }, [user]); // <- Dependencia clave: si cambia 'user', recargamos.
+  }, [user]); 
 
-  // 2. GUARDAR CARRITO: Se ejecuta cada vez que modificamos los productos
+  // 2. Efecto para GUARDAR cambios
+  // Se ejecuta cada vez que agregas/quitas productos
   useEffect(() => {
-    const { storage, key } = getStorageConfig();
+    const { storage, key } = getStorageConfig(user);
     storage.setItem(key, JSON.stringify(items));
   }, [items, user]);
 
 
-  // --- FUNCIONES DEL CARRITO (Se mantienen igual) ---
+  // --- CÁLCULOS (Se mantienen igual) ---
+  const subtotal = items.reduce((total, item) => total + (item.precio * item.cantidad), 0);
+  let descuentoTotal = 0;
 
+  if (user) {
+    const ganoDescuentoEdad = localStorage.getItem('descuentoEdad') === 'true';
+    const ganoDescuentoCodigo = localStorage.getItem('descuentoCodigo') === 'true';
+
+    if (ganoDescuentoEdad) descuentoTotal += subtotal * 0.50; 
+    if (ganoDescuentoCodigo) descuentoTotal += subtotal * 0.10; 
+  } 
+
+  const totalPrecio = Math.max(0, subtotal - descuentoTotal);
+  const totalItems = items.reduce((total, item) => total + item.cantidad, 0);
+
+  // --- FUNCIONES CRUD (Se mantienen igual) ---
   const agregarAlCarrito = (producto: IProducto, cantidad: number, mensaje: string) => {
     const mensajeNormalizado = mensaje.trim();
     const itemExistente = items.find(
@@ -82,8 +109,8 @@ export const CarritoProvider = ({ children }: Props) => {
     );
 
     if (itemExistente) {
-      setItems(prevItems => 
-        prevItems.map(item => 
+      setItems(prev => 
+        prev.map(item => 
           item.idUnico === itemExistente.idUnico 
             ? { ...item, cantidad: item.cantidad + cantidad }
             : item
@@ -96,40 +123,33 @@ export const CarritoProvider = ({ children }: Props) => {
         cantidad: cantidad,
         mensaje: mensajeNormalizado,
       };
-      setItems(prevItems => [...prevItems, nuevoItem]);
+      setItems(prev => [...prev, nuevoItem]);
     }
   };
 
-  const eliminarDelCarrito = (idUnico: number) => {
-    setItems(prevItems => prevItems.filter(item => item.idUnico !== idUnico));
+  const eliminarDelCarrito = (id: number) => {
+    setItems(prev => prev.filter(item => item.idUnico !== id));
   };
 
-  const actualizarCantidad = (idUnico: number, nuevaCantidad: number) => {
-    if (nuevaCantidad < 1) {
-      eliminarDelCarrito(idUnico);
+  const actualizarCantidad = (id: number, val: number) => {
+    if (val < 1) {
+      eliminarDelCarrito(id);
       return;
     }
-    setItems(prevItems => 
-      prevItems.map(item => 
-        item.idUnico === idUnico ? { ...item, cantidad: nuevaCantidad } : item
-      )
+    setItems(prev => 
+      prev.map(item => item.idUnico === id ? { ...item, cantidad: val } : item)
     );
   };
 
-  const actualizarMensaje = (idUnico: number, nuevoMensaje: string) => {
-    setItems(prevItems => 
-      prevItems.map(item => 
-        item.idUnico === idUnico ? { ...item, mensaje: nuevoMensaje } : item
-      )
+  const actualizarMensaje = (id: number, msg: string) => {
+    setItems(prev => 
+      prev.map(item => item.idUnico === id ? { ...item, mensaje: msg } : item)
     );
   };
 
   const vaciarCarrito = () => {
     setItems([]);
   };
-
-  const totalItems = items.reduce((total, item) => total + item.cantidad, 0);
-  const totalPrecio = items.reduce((total, item) => total + (item.precio * item.cantidad), 0);
 
   return (
     <CarritoContext.Provider value={{
@@ -140,7 +160,9 @@ export const CarritoProvider = ({ children }: Props) => {
       actualizarMensaje,
       vaciarCarrito,
       totalItems,
-      totalPrecio
+      totalPrecio,    
+      subtotal,       
+      descuentoTotal 
     }}>
       {children}
     </CarritoContext.Provider>

@@ -8,17 +8,15 @@ import { StarRating } from '../../components/StarRating';
 function AdminResenas() {
   const [resenas, setResenas] = useState<IResena[]>([]);
   
-  // --- ESTADOS PARA FILTROS ---
   const [filtroTexto, setFiltroTexto] = useState('');
   const [filtroEstrellas, setFiltroEstrellas] = useState('todas');
 
-  // Estado para el Modal
   const [showModal, setShowModal] = useState(false);
   const [resenaAEliminar, setResenaAEliminar] = useState<IResena | null>(null);
 
   const cargarDatos = async () => {
     const data = await getAllResenas();
-    // Ordenamos por fecha (más nuevas primero) para que el admin vea lo último
+
     setResenas(data.reverse());
   };
 
@@ -26,9 +24,7 @@ function AdminResenas() {
     cargarDatos();
   }, []);
 
-  // --- LÓGICA DE FILTRADO ---
   const resenasFiltradas = resenas.filter((r) => {
-    // 1. Filtro por Texto (Busca en nombre, email, producto o comentario)
     const texto = filtroTexto.toLowerCase();
     const coincideTexto = 
       r.nombreUsuario.toLowerCase().includes(texto) ||
@@ -36,7 +32,6 @@ function AdminResenas() {
       r.codigoProducto.toLowerCase().includes(texto) ||
       r.comentario.toLowerCase().includes(texto);
 
-    // 2. Filtro por Estrellas
     const coincideEstrellas = 
       filtroEstrellas === 'todas' || r.calificacion.toString() === filtroEstrellas;
 
@@ -60,7 +55,6 @@ function AdminResenas() {
     <div>
       <h2 className="logo-text mb-4">Gestión de Reseñas</h2>
 
-      {/* --- BARRA DE FILTROS --- */}
       <div className="bg-white p-3 rounded shadow-sm mb-4 border">
         <Row className="g-3">
           <Col md={8}>
@@ -72,7 +66,7 @@ function AdminResenas() {
                   placeholder="Buscar por usuario, producto o palabra clave..." 
                   value={filtroTexto}
                   onChange={(e) => setFiltroTexto(e.target.value)}
-                  style={{ paddingLeft: '35px' }} // Espacio para el ícono
+                  style={{ paddingLeft: '35px' }}
                 />
                 <i 
                   className="fa-solid fa-magnifying-glass position-absolute text-muted" 
@@ -101,7 +95,6 @@ function AdminResenas() {
         </Row>
       </div>
 
-      {/* --- TABLA DE RESULTADOS --- */}
       <div className="table-responsive shadow-sm bg-white rounded">
         <Table hover className="mb-0 align-middle">
           <thead className="bg-light">
@@ -171,7 +164,6 @@ function AdminResenas() {
         </Table>
       </div>
 
-      {/* MODAL DE ELIMINACIÓN */}
       <ModalConfirmacion
         show={showModal}
         titulo="Eliminar Reseña"

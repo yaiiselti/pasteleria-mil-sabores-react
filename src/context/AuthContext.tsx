@@ -6,6 +6,8 @@ interface UserSession {
   email: string;
   nombre: string;
   rol: 'Cliente' | 'Administrador' ;
+  fechaNacimiento?: string;
+  codigoPromo?: string;
 }
 
 interface AuthContextType {
@@ -54,7 +56,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const sessionData: UserSession = {
                 email: usuarioEncontrado.email,
                 nombre: usuarioEncontrado.nombre,
-                rol: usuarioEncontrado.tipo
+                rol: usuarioEncontrado.tipo,
+                fechaNacimiento: usuarioEncontrado.fechaNacimiento,
+                codigoPromo: usuarioEncontrado.codigoPromo
             };
             setUser(sessionData); // Actualizamos estado
             return { success: true, message: `Bienvenido ${usuarioEncontrado.nombre}` };
