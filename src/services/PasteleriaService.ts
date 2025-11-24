@@ -311,7 +311,7 @@ export interface IUsuario {
   tipo: 'Cliente' | 'Administrador';
   region?: string;
   comuna?: string;
-fechaNacimiento?: string;
+  fechaNacimiento?: string;
   codigoPromo?: string;
 }
 
@@ -325,7 +325,8 @@ const usuariosIniciales: IUsuario[] = [
     password: "1234", // <--- NUEVO
     tipo: "Cliente",
     region: "Metropolitana",
-    comuna: "Santiago"
+    comuna: "Santiago",
+    fechaNacimiento: "1960-05-10"
   },
   {
     run: "98765432-1",

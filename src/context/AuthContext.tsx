@@ -1,11 +1,12 @@
 import { createContext, useState, useContext, useEffect } from 'react';
-import type{ ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { getUsuarios } from '../services/PasteleriaService';
 
+// 1. Interfaz de Sesión (Con datos reales)
 interface UserSession {
   email: string;
   nombre: string;
-  rol: 'Cliente' | 'Administrador' ;
+  rol: 'Cliente' | 'Administrador';
   fechaNacimiento?: string;
   codigoPromo?: string;
 }
@@ -27,12 +28,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedUser = localStorage.getItem('usuarioSesion');
       return storedUser ? JSON.parse(storedUser) : null;
     } catch (error) {
-      console.error("Error al leer sesión:", error);
       return null;
     }
   });
 
-  
+  // --- CORRECCIÓN AQUÍ ---
+  // Creamos la variable derivada para saber si está autenticado
+  const isAuthenticated = !!user; 
+  // -----------------------
+
   useEffect(() => {
     if (user) {
       localStorage.setItem('usuarioSesion', JSON.stringify(user));
@@ -45,14 +49,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const usuarios = await getUsuarios();
     const usuarioEncontrado = usuarios.find(u => u.email.toLowerCase() === email.toLowerCase());
 
+    // Admin Hardcoded
     if (email === 'admin@duoc.cl' && password === 'admin') {
        const adminUser: UserSession = { email, nombre: 'Administrador', rol: 'Administrador' };
-       setUser(adminUser); // Actualizamos estado (el useEffect guardará en localStorage)
+       setUser(adminUser);
        return { success: true, message: 'Bienvenido Admin' };
     }
 
     if (usuarioEncontrado) {
         if (usuarioEncontrado.password === password) {
+            
             const sessionData: UserSession = {
                 email: usuarioEncontrado.email,
                 nombre: usuarioEncontrado.nombre,
@@ -60,7 +66,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 fechaNacimiento: usuarioEncontrado.fechaNacimiento,
                 codigoPromo: usuarioEncontrado.codigoPromo
             };
-            setUser(sessionData); // Actualizamos estado
+            
+            setUser(sessionData);
             return { success: true, message: `Bienvenido ${usuarioEncontrado.nombre}` };
         } else {
             return { success: false, message: 'Contraseña incorrecta' };
@@ -71,21 +78,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateUserSession = (newData: Partial<UserSession>) => {
     if (user) {
-      // Al hacer setUser, el useEffect de arriba se encargará de guardar en localStorage
       setUser({ ...user, ...newData });
     }
   };
 
   const logout = () => {
-    setUser(null); // Esto disparará el useEffect que hace removeItem
+    setUser(null);
   };
 
   return (
     <AuthContext.Provider value={{ 
       user, 
-      isAuthenticated: !!user, 
+      isAuthenticated, // ¡Ahora sí funciona porque la variable existe!
       login, 
-      logout,
+      logout, 
       updateUserSession 
     }}>
       {children}
