@@ -51,7 +51,9 @@ function AdminLayout() {
               <Nav.Link as={Link} to="/admin/resenas" active={isActive('/admin/resenas')}>
                 <i className="fa-solid fa-star me-2"></i> Reseñas
               </Nav.Link>
-
+              <Nav.Link as={Link} to="/admin/pedidos" active={isActive('/admin/pedidos')}>
+                <i className="fa-solid fa-receipt me-2"></i> Pedidos
+              </Nav.Link>
               {/* 4. BOTÓN CERRAR SESIÓN (MÓVIL) */}
               <Nav.Link onClick={handleLogout} className="text-danger fw-bold">
                 <i className="fa-solid fa-power-off me-2"></i> Cerrar Sesión
@@ -97,13 +99,18 @@ function AdminLayout() {
                   <i className="fa-solid fa-users me-2"></i> Usuarios
                 </Nav.Link>
 
-                {/* ... después de Usuarios ... */}
-                  <Nav.Link 
-                    as={Link} to="/admin/resenas" 
-                    className={`px-3 py-2 rounded ${isActive('/admin/resenas') ? "bg-primary text-white" : "text-dark"}`}
+                <Nav.Link 
+                  as={Link} to="/admin/resenas" 
+                  className={`px-3 py-2 rounded ${isActive('/admin/resenas') ? "bg-primary text-white" : "text-dark"}`}
+                >
+                  <i className="fa-solid fa-star me-2"></i> Reseñas 
+                </Nav.Link>
+                <Nav.Link 
+                    as={Link} to="/admin/pedidos" 
+                    className={`px-3 py-2 rounded ${isActive('/admin/pedidos') ? "bg-primary text-white" : "text-dark"}`}
                   >
-                    <i className="fa-solid fa-star me-2"></i> Reseñas
-                  </Nav.Link>
+                    <i className="fa-solid fa-receipt me-2"></i> Pedidos
+                </Nav.Link>
 
                 <hr className="my-2" />
 

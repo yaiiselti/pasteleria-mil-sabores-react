@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from 'vitest';
-import { getProductos, getProductoByCodigo, getUsuarios } from '../../services/PasteleriaService';
+import { getProductos, getProductoByCodigo, getUsuarios, getAllPedidos,saveResena } from '../../services/PasteleriaService';
 
 describe('PasteleriaService - Lógica de Datos', () => {
     
@@ -38,3 +38,23 @@ describe('PasteleriaService - Lógica de Datos', () => {
         expect(admin?.tipo).toBe('Administrador');
     });
 });
+
+test('getAllPedidos: Debe devolver un array (vacío o con datos)', async () => {
+        const pedidos = await getAllPedidos(); // Asegúrate de importar esta función arriba
+        expect(pedidos).toBeDefined();
+        expect(Array.isArray(pedidos)).toBe(true);
+    });
+
+    test('saveResena: Debe permitir guardar una opinión', async () => {
+        const nuevaResena = {
+            codigoProducto: 'TC001',
+            emailUsuario: 'test@duoc.cl',
+            nombreUsuario: 'Tester',
+            calificacion: 5,
+            comentario: 'Prueba unitaria',
+            fecha: '01/01/2025'
+        };
+        
+        // No debe lanzar error
+        await expect(saveResena(nuevaResena)).resolves.not.toThrow();
+    });

@@ -26,50 +26,62 @@ export const CarritoContext = createContext<CarritoContextType | undefined>(unde
 
 export const CarritoProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth(); 
-  const [items, setItems] = useState<IItemCarrito[]>([]);
 
-  // Almacenamiento Inteligente
-  const getStorageConfig = () => {
-    if (user) return { key: `carrito_${user.email}`, storage: localStorage };
-    else return { key: 'carrito_invitado', storage: sessionStorage };
+  // Función auxiliar para saber dónde guardar/leer (La sacamos para usarla al inicio)
+  const getStorageConfig = (currentUser: any) => {
+    if (currentUser) {
+      return { key: `carrito_${currentUser.email}`, storage: localStorage };
+    } else {
+      return { key: 'carrito_invitado', storage: sessionStorage };
+    }
   };
 
-  // Cargar
+  // --- CORRECCIÓN AQUÍ: INICIALIZACIÓN PEREZOSA ---
+  // Leemos la memoria ANTES de que React dibuje nada.
+  // Esto evita que se guarde un array vacío encima de tus datos.
+  const [items, setItems] = useState<IItemCarrito[]>(() => {
+    const { key, storage } = getStorageConfig(user);
+    try {
+      const guardado = storage.getItem(key);
+      return guardado ? JSON.parse(guardado) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // 1. Efecto para CAMBIAR de usuario (Login/Logout)
+  // Solo recarga si cambia la persona, para traer SU carrito
   useEffect(() => {
-    const { key, storage } = getStorageConfig();
+    const { key, storage } = getStorageConfig(user);
     try {
       const guardado = storage.getItem(key);
       if (guardado) setItems(JSON.parse(guardado));
-      else setItems([]);
+      else setItems([]); // Si es usuario nuevo, carrito vacío
     } catch { setItems([]); }
   }, [user]);
 
-  // Guardar
+  // 2. Efecto para GUARDAR
   useEffect(() => {
-    const { key, storage } = getStorageConfig();
+    const { key, storage } = getStorageConfig(user);
     storage.setItem(key, JSON.stringify(items));
   }, [items, user]);
 
 
-  // --- CÁLCULO DE DESCUENTOS REAL ---
+  // --- CÁLCULOS Y LÓGICA (Se mantienen igual) ---
   const subtotal = items.reduce((total, item) => total + (item.precio * item.cantidad), 0);
   let descuentoTotal = 0;
 
   if (user) {
-    // 1. Calcular Edad en vivo
+    // Leemos datos reales del usuario para el descuento
     if (user.fechaNacimiento) {
       const hoy = new Date();
       const cumple = new Date(user.fechaNacimiento);
       let edad = hoy.getFullYear() - cumple.getFullYear();
       const m = hoy.getMonth() - cumple.getMonth();
-      if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) {
-        edad--;
-      }
-      // Aplica si es mayor de 50
+      if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) edad--;
+      
       if (edad >= 50) descuentoTotal += subtotal * 0.50;
     }
-    
-    // 2. Verificar Código
     if (user.codigoPromo === 'FELICES50') {
       descuentoTotal += subtotal * 0.10;
     }

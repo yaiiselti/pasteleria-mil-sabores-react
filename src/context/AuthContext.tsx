@@ -6,7 +6,10 @@ import { getUsuarios } from '../services/PasteleriaService';
 interface UserSession {
   email: string;
   nombre: string;
+  apellidos?: string; // <--- NUEVO
   rol: 'Cliente' | 'Administrador';
+  region?: string;    // <--- NUEVO
+  comuna?: string;    // <--- NUEVO
   fechaNacimiento?: string;
   codigoPromo?: string;
 }
@@ -62,7 +65,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const sessionData: UserSession = {
                 email: usuarioEncontrado.email,
                 nombre: usuarioEncontrado.nombre,
+                apellidos: usuarioEncontrado.apellidos,
                 rol: usuarioEncontrado.tipo,
+                region: usuarioEncontrado.region,
+                comuna: usuarioEncontrado.comuna,
                 fechaNacimiento: usuarioEncontrado.fechaNacimiento,
                 codigoPromo: usuarioEncontrado.codigoPromo
             };

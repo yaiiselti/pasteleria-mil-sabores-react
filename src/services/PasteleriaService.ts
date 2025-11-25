@@ -276,9 +276,9 @@ export const deleteProducto = async (codigo: string): Promise<void> => {
 export const saveProducto = async (producto: IProducto): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   let productos = cargarBD();
-  
+
   const index = productos.findIndex(p => p.codigo === producto.codigo);
-  
+
   if (index >= 0) {
     // Si ya existe, lo actualizamos (Editar)
     productos[index] = producto;
@@ -286,7 +286,7 @@ export const saveProducto = async (producto: IProducto): Promise<void> => {
     // Si no existe, lo agregamos al final (Crear nuevo)
     productos.push(producto);
   }
-  
+
   guardarBD(productos);
 };
 
@@ -322,7 +322,7 @@ const usuariosIniciales: IUsuario[] = [
     nombre: "Ana",
     apellidos: "González",
     email: "ana.gonzalez@duoc.cl",
-    password: "1234", // <--- NUEVO
+    password: "1234",
     tipo: "Cliente",
     region: "Metropolitana",
     comuna: "Santiago",
@@ -333,7 +333,7 @@ const usuariosIniciales: IUsuario[] = [
     nombre: "Carlos",
     apellidos: "Pérez",
     email: "carlos.perez@gmail.com",
-    password: "1234", // <--- NUEVO
+    password: "1234",
     tipo: "Cliente",
     region: "Biobío",
     comuna: "Concepción"
@@ -396,15 +396,15 @@ export const deleteUsuario = async (run: string): Promise<void> => {
 export const saveUsuario = async (usuario: IUsuario): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   let usuarios = cargarUsuariosBD();
-  
+
   const index = usuarios.findIndex(u => u.run === usuario.run);
-  
+
   if (index >= 0) {
     usuarios[index] = usuario; // Editar
   } else {
     usuarios.push(usuario); // Crear
   }
-  
+
   guardarUsuariosBD(usuarios);
 };
 
@@ -415,12 +415,11 @@ export interface IResena {
   codigoProducto: string;
   emailUsuario: string;
   nombreUsuario: string;
-  calificacion: number; // 1 a 5
+  calificacion: number;
   comentario: string;
   fecha: string;
 }
 
-// 2. DATOS INICIALES (Para que se vea movimiento)
 const resenasIniciales: IResena[] = [
   {
     id: 1,
@@ -475,10 +474,10 @@ export const getResenasPorProducto = async (codigoProducto: string): Promise<IRe
 export const saveResena = async (nuevaResena: Omit<IResena, 'id'>): Promise<void> => {
   await new Promise(r => setTimeout(r, 500));
   let lista = cargarResenasBD();
-  
+
   // Creamos un ID simple basado en timestamp
   const resenaConId: IResena = { ...nuevaResena, id: Date.now() };
-  
+
   lista.push(resenaConId);
   guardarResenasBD(lista);
 };
@@ -488,4 +487,71 @@ export const deleteResena = async (id: number): Promise<void> => {
   await new Promise(r => setTimeout(r, 500));
   let lista = cargarResenasBD();
   guardarResenasBD(lista.filter(r => r.id !== id));
+};
+
+
+
+
+
+
+
+// ----------------------------------------------------------- datos con pedidos ---------------------------------------------------
+// 1. Definimos la Interfaz de Pedido (Si ya la tienes arriba, bórrala de aquí)
+export interface IPedido {
+  id: number;
+  fechaEmision: string;
+  horaEmision: string;
+  fechaEntrega: string;
+  cliente: {
+    nombre: string;
+    email: string;
+    direccion: string;
+    comuna: string;
+    medioPago: string;
+  };
+  total: number;
+  estado: 'Pendiente' | 'En Preparación' | 'En Reparto' | 'Entregado' | 'Cancelado';
+  productos: any[];
+}
+
+const KEY_PEDIDOS = 'historialPedidos';
+
+// 2. Funciones auxiliares específicas para Pedidos (Para no depender de cargarDatos genérico)
+const cargarPedidosBD = (): IPedido[] => {
+  try {
+    const guardado = localStorage.getItem(KEY_PEDIDOS);
+    return guardado ? JSON.parse(guardado) : [];
+  } catch {
+    return [];
+  }
+};
+
+const guardarPedidosBD = (datos: IPedido[]) => {
+  localStorage.setItem(KEY_PEDIDOS, JSON.stringify(datos));
+};
+
+// 3. Funciones CRUD para Pedidos (Exportadas)
+
+export const getAllPedidos = async (): Promise<IPedido[]> => {
+  await new Promise(r => setTimeout(r, 300));
+  return cargarPedidosBD();
+};
+
+export const updateEstadoPedido = async (id: number, nuevoEstado: string): Promise<void> => {
+  await new Promise(r => setTimeout(r, 500));
+  const lista = cargarPedidosBD();
+  // Actualizamos el estado
+  const listaActualizada = lista.map(p => 
+    p.id === id ? { ...p, estado: nuevoEstado } : p
+  );
+  // @ts-ignore (Ignoramos error de tipo estricto en el string del estado)
+  guardarPedidosBD(listaActualizada);
+};
+
+export const deletePedido = async (id: number): Promise<void> => {
+  await new Promise(r => setTimeout(r, 500));
+  const lista = cargarPedidosBD();
+  // Filtramos para borrar
+  const listaActualizada = lista.filter(p => p.id !== id);
+  guardarPedidosBD(listaActualizada);
 };

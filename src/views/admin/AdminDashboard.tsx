@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Row, Col, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom'; // Importamos Link para navegar
-import { getProductos, getUsuarios, getAllResenas } from '../../services/PasteleriaService';
+import { getProductos, getUsuarios, getAllResenas, getAllPedidos } from '../../services/PasteleriaService';
 
 function AdminDashboard() {
   // Estados para guardar los conteos reales
   const [totalProductos, setTotalProductos] = useState(0);
   const [totalUsuarios, setTotalUsuarios] = useState(0);
   const [totalResenas, setTotalResenas] = useState(0);
+  const [totalPedidos, setTotalPedidos] = useState(0);
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -15,9 +16,11 @@ function AdminDashboard() {
       const prods = await getProductos();
       const users = await getUsuarios();
       const reviews = await getAllResenas();
+      const pedidos = await getAllPedidos();
       setTotalProductos(prods.length);
       setTotalUsuarios(users.length);
       setTotalResenas(reviews.length);
+      setTotalPedidos(pedidos.length);
     };
     cargarDatos();
   }, []);
@@ -79,6 +82,24 @@ function AdminDashboard() {
               <h1 className="display-4 fw-bold mb-0">{totalResenas}</h1>
               <p className="mb-0 fs-5 text-white-50">Reseñas</p>
               <span className="mt-3 btn btn-light btn-sm rounded-pill px-3 text-info fw-bold">
+                Gestionar <i className="fa-solid fa-arrow-right ms-1"></i>
+              </span>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col md={4}>
+          <Card 
+            as={Link} 
+            to="/admin/pedidos" 
+            className="border-0 shadow-sm text-white bg-danger h-100 text-decoration-none"
+            style={{ transition: 'transform 0.2s' }}
+          >
+            <Card.Body className="d-flex flex-column justify-content-center align-items-center py-5">
+              <i className="fa-solid fa-receipt fa-3x mb-3 opacity-75"></i>
+              <h1 className="display-4 fw-bold mb-0">{totalPedidos}</h1>
+              <p className="mb-0 fs-5 text-white-50">Pedidos Totales</p>
+              <span className="mt-3 btn btn-light btn-sm rounded-pill px-3 text-danger fw-bold">
                 Gestionar <i className="fa-solid fa-arrow-right ms-1"></i>
               </span>
             </Card.Body>
