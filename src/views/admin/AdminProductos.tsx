@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Form, Alert, Badge,Row, Col } from 'react-bootstrap'; // Importamos Badge
+import { Table, Button, Form, Alert, Badge, Row, Col } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { getProductos, deleteProducto, toggleEstadoProducto } from '../../services/PasteleriaService';
 import type { IProducto } from '../../services/PasteleriaService';
@@ -18,6 +18,9 @@ function AdminProductos() {
   const [showModal, setShowModal] = useState(false);
   const [productoAEliminar, setProductoAEliminar] = useState<IProducto | null>(null);
 
+  // --- PAGINACIÓN "VER MÁS" ---
+  const [visibleCount, setVisibleCount] = useState(25);
+
   const cargarDatos = async () => {
     const data = await getProductos();
     setProductos(data);
@@ -27,33 +30,35 @@ function AdminProductos() {
     cargarDatos();
   }, []);
 
+  // Reiniciar paginación cuando cambian los filtros
+  useEffect(() => {
+    setVisibleCount(25);
+  }, [filtroTexto, filtroEstado]);
+
   // --- LÓGICA DE FILTRADO COMBINADO ---
   const productosFiltrados = productos.filter(p => {
-    // 1. Filtro por Texto (Nombre o Código)
     const coincideTexto = 
       p.nombre.toLowerCase().includes(filtroTexto.toLowerCase()) ||
       p.codigo.toLowerCase().includes(filtroTexto.toLowerCase());
 
-    // 2. Filtro por Estado (Nuevo)
     const coincideEstado = 
       filtroEstado === 'todos' || 
-      (filtroEstado === 'activos' && p.activo !== false) || // Si es undefined cuenta como activo
+      (filtroEstado === 'activos' && p.activo !== false) || 
       (filtroEstado === 'inactivos' && p.activo === false);
 
     return coincideTexto && coincideEstado;
   });
 
-  
-  // --- NUEVO: Manejador para el Toggle de Estado ---
+  // PRODUCTOS VISIBLES (Limitados por visibleCount)
+  const productosVisibles = productosFiltrados.slice(0, visibleCount);
+
+  // --- Manejador Toggle ---
   const handleToggleEstado = async (producto: IProducto) => {
     try {
         const nuevoEstado = await toggleEstadoProducto(producto.codigo);
-        
-        // Actualizamos el estado local para que se refleje instantáneamente
         setProductos(prev => prev.map(p => 
             p.codigo === producto.codigo ? { ...p, activo: nuevoEstado } : p
         ));
-
         showNotification(
             `Producto ${nuevoEstado ? 'Habilitado' : 'Inhabilitado'} correctamente`, 
             nuevoEstado ? 'success' : 'warning'
@@ -124,7 +129,7 @@ function AdminProductos() {
         <Table hover className="mb-0 align-middle">
           <thead className="bg-light">
             <tr>
-              <th>Estado</th> {/* Nueva Columna */}
+              <th>Estado</th>
               <th>Código</th>
               <th>Imagen</th>
               <th>Nombre</th>
@@ -134,24 +139,21 @@ function AdminProductos() {
             </tr>
           </thead>
           <tbody>
-            {productosFiltrados.map((p) => (
+            {productosVisibles.map((p) => (
               <tr key={p.codigo} className={!p.activo ? 'bg-light text-muted' : ''}>
-                
-                {/* COLUMNA ESTADO (BOTÓN TOGGLE) */}
                 <td>
                     <Form.Check 
                         type="switch"
                         id={`switch-${p.codigo}`}
-                        checked={p.activo !== false} // Si es undefined es true
+                        checked={p.activo !== false}
                         onChange={() => handleToggleEstado(p)}
-                        title={p.activo ? "Producto Habilitado" : "Producto Inhabilitado (No visible en tienda)"}
+                        title={p.activo ? "Producto Habilitado" : "Producto Inhabilitado"}
                         style={{ cursor: 'pointer' }}
                     />
                     <small className={`fw-bold ${p.activo ? 'text-success' : 'text-danger'}`} style={{ fontSize: '0.7rem' }}>
                         {p.activo ? 'ACTIVO' : 'INACTIVO'}
                     </small>
                 </td>
-
                 <td className="fw-bold">{p.codigo}</td>
                 <td>
                   <img 
@@ -168,7 +170,6 @@ function AdminProductos() {
                 <td>${p.precio.toLocaleString('es-CL')}</td>
                 <td>
                   <div className="d-flex gap-2"> 
-                    
                     <Link 
                       to={`/admin/productos/editar/${p.codigo}`} 
                       className="btn btn-outline-primary btn-sm px-3"
@@ -176,7 +177,6 @@ function AdminProductos() {
                     >
                       <i className="fa-solid fa-pen me-1"></i> Editar
                     </Link>
-                    
                     <Button 
                       variant="outline-danger" 
                       size="sm" 
@@ -186,12 +186,11 @@ function AdminProductos() {
                     >
                       <i className="fa-solid fa-trash me-1"></i> Eliminar
                     </Button>
-                    
                   </div>
                 </td>
               </tr>
             ))}
-            {productosFiltrados.length === 0 && (
+            {productosVisibles.length === 0 && (
               <tr>
                 <td colSpan={7} className="text-center py-4 text-muted">
                   No se encontraron productos.
@@ -201,6 +200,15 @@ function AdminProductos() {
           </tbody>
         </Table>
       </div>
+
+      {/* BOTÓN VER MÁS */}
+      {productosFiltrados.length > visibleCount && (
+        <div className="text-center mt-4">
+            <Button variant="outline-primary" onClick={() => setVisibleCount(prev => prev + 25)}>
+                <i className="fa-solid fa-eye me-2"></i> Ver más productos ({productosFiltrados.length - visibleCount} restantes)
+            </Button>
+        </div>
+      )}
 
       <ModalConfirmacion
         show={showModal}

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Table, Form, Alert, Button, Row, Col, Modal, Card, ListGroup, Badge } from 'react-bootstrap';
-// 1. Importamos todo lo necesario: Pedidos y Productos (para verificar stock)
 import { getAllPedidos, updateEstadoPedido, deletePedido, getProductos } from '../../services/PasteleriaService';
 import type { IPedido, IProducto } from '../../services/PasteleriaService';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
@@ -14,13 +13,15 @@ function AdminPedidos() {
   const [filtroTexto, setFiltroTexto] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
 
+  // PAGINACIÓN
+  const [visibleCount, setVisibleCount] = useState(25);
+
   // Modales
   const [showModalEliminar, setShowModalEliminar] = useState(false);
   const [pedidoAEliminar, setPedidoAEliminar] = useState<IPedido | null>(null);
   const [showModalDetalle, setShowModalDetalle] = useState(false);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<IPedido | null>(null);
 
-  // --- 2. CONFIGURACIÓN VISUAL DE ESTADOS (Con Colores y Emojis) ---
   const ESTADOS_PEDIDO = [
     { value: 'Pendiente',      label: '🟡 Pendiente',       color: '#ffc107', variant: 'warning' },
     { value: 'En Preparación', label: '🔵 En Preparación',  color: '#0dcaf0', variant: 'info' },
@@ -29,7 +30,6 @@ function AdminPedidos() {
     { value: 'Cancelado',      label: '🔴 Cancelado',       color: '#dc3545', variant: 'danger' },
   ];
 
-  // 3. Carga de Datos Combinada
   const cargarDatos = async () => {
     const [dataPedidos, dataProductos] = await Promise.all([
         getAllPedidos(),
@@ -43,6 +43,10 @@ function AdminPedidos() {
     cargarDatos();
   }, []);
 
+  useEffect(() => {
+    setVisibleCount(25);
+  }, [filtroTexto, filtroEstado]);
+
   const pedidosFiltrados = pedidos.filter((p) => {
     const texto = filtroTexto.toLowerCase();
     const matchTexto = 
@@ -52,6 +56,9 @@ function AdminPedidos() {
     const matchEstado = filtroEstado === 'todos' || p.estado === filtroEstado;
     return matchTexto && matchEstado;
   });
+
+  // PEDIDOS VISIBLES
+  const pedidosVisibles = pedidosFiltrados.slice(0, visibleCount);
 
   const handleEstadoChange = async (id: number, nuevoEstado: string) => {
     await updateEstadoPedido(id, nuevoEstado);
@@ -81,22 +88,18 @@ function AdminPedidos() {
     setShowModalDetalle(true);
   };
 
-  // Helper visual para Badge
   const getBadgeVariant = (estado: string) => {
     const config = ESTADOS_PEDIDO.find(e => e.value === estado);
     return config ? config.variant : 'secondary';
   };
 
-  // Helper visual para Color Hexadecimal
   const getStatusColor = (estado: string) => {
     const config = ESTADOS_PEDIDO.find(e => e.value === estado);
     return config ? config.color : '#6c757d';
   };
 
-  // 4. Lógica de Disponibilidad (La que agregamos recién)
   const verificarDisponibilidad = (codigoProducto: string) => {
     const productoEnCatalogo = productosCatalogo.find(p => p.codigo === codigoProducto);
-    // Si no existe o activo es false, hay problema
     if (!productoEnCatalogo || productoEnCatalogo.activo === false) {
         return false; 
     }
@@ -108,7 +111,6 @@ function AdminPedidos() {
       <h2 className="logo-text mb-4">Gestión de Pedidos</h2>
       {mensajeExito && <Alert variant="success">{mensajeExito}</Alert>}
 
-      {/* Filtros */}
       <div className="bg-white p-3 rounded shadow-sm mb-4 border">
         <Row className="g-3">
           <Col md={8}>
@@ -131,7 +133,6 @@ function AdminPedidos() {
               <Form.Label className="small text-muted fw-bold">Filtrar por Estado</Form.Label>
               <Form.Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
                 <option value="todos">Todos los estados</option>
-                {/* Selector de Filtro también con colores */}
                 {ESTADOS_PEDIDO.map((estado) => (
                    <option key={estado.value} value={estado.value} style={{ color: estado.color, fontWeight: 'bold' }}>
                      {estado.label}
@@ -143,7 +144,6 @@ function AdminPedidos() {
         </Row>
       </div>
 
-      {/* Tabla */}
       <div className="table-responsive shadow-sm bg-white rounded">
         <Table hover className="mb-0 align-middle">
           <thead className="bg-light">
@@ -157,7 +157,7 @@ function AdminPedidos() {
             </tr>
           </thead>
           <tbody>
-            {pedidosFiltrados.map((p) => (
+            {pedidosVisibles.map((p) => (
               <tr key={p.id}>
                 <td className="fw-bold">#{p.id}</td>
                 <td>
@@ -169,8 +169,6 @@ function AdminPedidos() {
                   <small className="text-muted">{p.cliente.email}</small>
                 </td>
                 <td className="fw-bold text-success">${p.total.toLocaleString('es-CL')}</td>
-                
-                {/* 5. SELECTOR CON COLORES Y EMOJIS (Restaurado) */}
                 <td style={{ minWidth: '180px' }}>
                   <Form.Select 
                     size="sm"
@@ -197,7 +195,6 @@ function AdminPedidos() {
                     ))}
                   </Form.Select>
                 </td>
-
                 <td>
                   <div className="d-flex gap-2">
                     <Button 
@@ -209,7 +206,6 @@ function AdminPedidos() {
                     >
                       <i className="fa-solid fa-eye me-1"></i> Ver
                     </Button>
-
                     <Button 
                       variant="outline-danger" 
                       size="sm" 
@@ -226,6 +222,15 @@ function AdminPedidos() {
           </tbody>
         </Table>
       </div>
+
+      {/* BOTÓN VER MÁS */}
+      {pedidosFiltrados.length > visibleCount && (
+        <div className="text-center mt-4">
+            <Button variant="outline-primary" onClick={() => setVisibleCount(prev => prev + 25)}>
+                <i className="fa-solid fa-eye me-2"></i> Ver más pedidos ({pedidosFiltrados.length - visibleCount} restantes)
+            </Button>
+        </div>
+      )}
 
       {/* --- MODAL DETALLE PEDIDO --- */}
       <Modal show={showModalDetalle} onHide={() => setShowModalDetalle(false)} size="lg" centered>
@@ -248,51 +253,41 @@ function AdminPedidos() {
                     <p className="mb-0"><strong>Pago:</strong> {pedidoSeleccionado.cliente.medioPago === 'webpay' ? 'WebPay / Tarjeta' : 'Transferencia'}</p>
                   </Card.Body>
                 </Card>
-                
                 <div className="mb-3">
                   <strong>Estado actual: </strong> 
                   <Badge bg={getBadgeVariant(pedidoSeleccionado.estado)} className="fs-6 ms-2">
                     {pedidoSeleccionado.estado}
                   </Badge>
                 </div>
-                
                 <p className="text-muted small">
                   Pedido realizado el {pedidoSeleccionado.fechaEmision} a las {pedidoSeleccionado.horaEmision}.
                   <br/>
                   Fecha de entrega solicitada: <strong>{pedidoSeleccionado.fechaEntrega}</strong>
                 </p>
               </Col>
-
               <Col md={6}>
                 <h6 className="fw-bold text-secondary mb-3">Productos Solicitados</h6>
                 <ListGroup variant="flush" className="mb-3 border rounded">
                   {pedidoSeleccionado.productos.map((prod: any) => {
-                    
-                    // 6. Verificación de Disponibilidad
                     const disponible = verificarDisponibilidad(prod.codigo);
-
                     return (
                         <ListGroup.Item key={prod.idUnico} className="d-flex flex-column bg-white">
                         <div className="d-flex justify-content-between align-items-start w-100">
                             <div className="me-auto">
                                 <div className="fw-bold">
                                     {prod.nombre}
-                                    {/* Alerta Visual */}
                                     {!disponible && <Badge bg="danger" className="ms-2 blink">NO DISPONIBLE</Badge>}
                                 </div>
                                 <small className="text-muted">Cant: {prod.cantidad} x ${prod.precio.toLocaleString('es-CL')}</small>
                             </div>
                             <span className="fw-bold text-dark">${(prod.precio * prod.cantidad).toLocaleString('es-CL')}</span>
                         </div>
-                        
-                        {/* Mensaje de Alerta para el Admin */}
                         {!disponible && (
                             <div className="mt-2 p-2 bg-danger bg-opacity-10 border border-danger rounded small text-danger">
                                 <i className="fa-solid fa-triangle-exclamation me-1"></i> 
                                 <strong>Atención:</strong> Este producto fue inhabilitado del catálogo. Revisa si hay stock o contacta al cliente.
                             </div>
                         )}
-
                         {prod.mensaje && (
                             <div className="mt-1 p-1 bg-light rounded border border-warning small text-dark w-100">
                                 <i className="fa-solid fa-pen-fancy me-1 text-warning"></i> "{prod.mensaje}"
@@ -302,7 +297,6 @@ function AdminPedidos() {
                     );
                   })}
                 </ListGroup>
-
                 <div className="d-flex justify-content-between border-top pt-2">
                   <span>Total a Pagar:</span>
                   <span className="fw-bold fs-5 text-success">${pedidoSeleccionado.total.toLocaleString('es-CL')}</span>

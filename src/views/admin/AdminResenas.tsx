@@ -10,10 +10,12 @@ function AdminResenas() {
   const [filtroTexto, setFiltroTexto] = useState('');
   const [filtroEstrellas, setFiltroEstrellas] = useState('todas');
 
+  // PAGINACIÓN
+  const [visibleCount, setVisibleCount] = useState(25);
+
   const [showModalEliminar, setShowModalEliminar] = useState(false);
   const [resenaAEliminar, setResenaAEliminar] = useState<IResena | null>(null);
 
-  // Modal Detalle
   const [showModalDetalle, setShowModalDetalle] = useState(false);
   const [resenaSeleccionada, setResenaSeleccionada] = useState<IResena | null>(null);
 
@@ -26,6 +28,10 @@ function AdminResenas() {
     cargarDatos();
   }, []);
 
+  useEffect(() => {
+    setVisibleCount(25);
+  }, [filtroTexto, filtroEstrellas]);
+
   const resenasFiltradas = resenas.filter((r) => {
     const texto = filtroTexto.toLowerCase();
     const coincideTexto = 
@@ -37,6 +43,9 @@ function AdminResenas() {
       filtroEstrellas === 'todas' || r.calificacion.toString() === filtroEstrellas;
     return coincideTexto && coincideEstrellas;
   });
+
+  // RESEÑAS VISIBLES
+  const resenasVisibles = resenasFiltradas.slice(0, visibleCount);
 
   const handleDeleteClick = (resena: IResena) => {
     setResenaAEliminar(resena);
@@ -100,7 +109,7 @@ function AdminResenas() {
             </tr>
           </thead>
           <tbody>
-            {resenasFiltradas.map((r) => (
+            {resenasVisibles.map((r) => (
               <tr key={r.id}>
                 <td className="text-nowrap small">{r.fecha}</td>
                 <td><Badge bg="light" text="dark" className="border">{r.codigoProducto}</Badge></td>
@@ -116,7 +125,6 @@ function AdminResenas() {
                 </td>
                 <td>
                   <div className="d-flex gap-2">
-                    {/* BOTÓN GRANDE: VER */}
                     <Button 
                       variant="outline-secondary" 
                       size="sm" 
@@ -126,8 +134,6 @@ function AdminResenas() {
                     >
                       <i className="fa-solid fa-eye me-1"></i> Ver
                     </Button>
-
-                    {/* BOTÓN GRANDE: ELIMINAR */}
                     <Button 
                       variant="outline-danger" 
                       size="sm" 
@@ -144,6 +150,15 @@ function AdminResenas() {
           </tbody>
         </Table>
       </div>
+
+      {/* BOTÓN VER MÁS */}
+      {resenasFiltradas.length > visibleCount && (
+        <div className="text-center mt-4">
+            <Button variant="outline-primary" onClick={() => setVisibleCount(prev => prev + 25)}>
+                <i className="fa-solid fa-eye me-2"></i> Ver más reseñas ({resenasFiltradas.length - visibleCount} restantes)
+            </Button>
+        </div>
+      )}
 
       {/* Modal Detalle */}
       <Modal show={showModalDetalle} onHide={() => setShowModalDetalle(false)} centered>

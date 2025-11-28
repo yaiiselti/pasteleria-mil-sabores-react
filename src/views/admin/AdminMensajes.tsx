@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Badge, Modal, Form, Card, Alert } from 'react-bootstrap';
+import { Table, Button, Badge, Modal, Form, Card, Alert, Row, Col } from 'react-bootstrap'; // Importamos Row y Col
 import { getAllMensajes, markAsRead, deleteMensaje } from '../../services/ContactoService';
 import type { IMensajeContacto } from '../../services/ContactoService';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
@@ -7,8 +7,14 @@ import { useNotification } from '../../context/NotificationContext';
 
 function AdminMensajes() {
   const [mensajes, setMensajes] = useState<IMensajeContacto[]>([]);
-  const [filtro, setFiltro] = useState('');
   const { showNotification } = useNotification();
+
+  // --- FILTROS ---
+  const [filtroTexto, setFiltroTexto] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('todos'); // Nuevo Filtro
+
+  // --- PAGINACIÓN ---
+  const [visibleCount, setVisibleCount] = useState(25);
 
   // Modales
   const [showModalDetalle, setShowModalDetalle] = useState(false);
@@ -19,13 +25,11 @@ function AdminMensajes() {
 
   const cargarDatos = async () => {
     const data = await getAllMensajes();
-    // Ordenamos: Primero los NO leídos, luego por fecha descendente (más recientes arriba)
+    // Ordenamos: Primero los NO leídos, luego por fecha descendente
     const ordenados = data.sort((a, b) => {
       if (a.leido === b.leido) {
-        // Si tienen el mismo estado, ordena por fecha (string a fecha)
         return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
       }
-      // Si son distintos, el NO leido (false) va primero
       return a.leido ? 1 : -1;
     });
     setMensajes(ordenados);
@@ -35,19 +39,37 @@ function AdminMensajes() {
     cargarDatos();
   }, []);
 
-  const mensajesFiltrados = mensajes.filter(m => 
-    m.nombre.toLowerCase().includes(filtro.toLowerCase()) || 
-    m.email.toLowerCase().includes(filtro.toLowerCase())
-  );
+  // Reiniciar paginación al cambiar cualquier filtro
+  useEffect(() => {
+    setVisibleCount(25);
+  }, [filtroTexto, filtroEstado]);
+
+  // --- LÓGICA DE FILTRADO COMBINADO ---
+  const mensajesFiltrados = mensajes.filter(m => {
+    // 1. Filtro Texto
+    const texto = filtroTexto.toLowerCase();
+    const coincideTexto = 
+      m.nombre.toLowerCase().includes(texto) || 
+      m.email.toLowerCase().includes(texto);
+
+    // 2. Filtro Estado (Nuevo)
+    const coincideEstado = 
+      filtroEstado === 'todos' ||
+      (filtroEstado === 'no_leidos' && !m.leido) ||
+      (filtroEstado === 'leidos' && m.leido);
+
+    return coincideTexto && coincideEstado;
+  });
+
+  // MENSAJES VISIBLES (Paginados)
+  const mensajesVisibles = mensajesFiltrados.slice(0, visibleCount);
 
   const handleVerMensaje = async (mensaje: IMensajeContacto) => {
     setMensajeSeleccionado(mensaje);
     setShowModalDetalle(true);
 
-    // Si es nuevo, lo marcamos como leído al abrirlo
     if (!mensaje.leido) {
       await markAsRead(mensaje.id);
-      // Actualización visual inmediata
       setMensajes(prev => prev.map(m => m.id === mensaje.id ? { ...m, leido: true } : m));
     }
   };
@@ -70,15 +92,40 @@ function AdminMensajes() {
     <div>
       <h2 className="logo-text mb-4">Buzón de Mensajes</h2>
 
-      <Form.Group className="mb-4">
-        <Form.Control 
-          type="text" 
-          placeholder="Buscar por remitente o correo..." 
-          value={filtro}
-          onChange={(e) => setFiltro(e.target.value)}
-          style={{ paddingLeft: '15px' }}
-        />
-      </Form.Group>
+      {/* --- BARRA DE FILTROS --- */}
+      <div className="bg-white p-3 rounded shadow-sm mb-4 border">
+        <Row className="g-3">
+          <Col md={8}>
+            <Form.Group>
+              <Form.Label className="small text-muted fw-bold">Buscar</Form.Label>
+              <div className="position-relative">
+                <Form.Control 
+                  type="text" 
+                  placeholder="Buscar por remitente o correo..." 
+                  value={filtroTexto}
+                  onChange={(e) => setFiltroTexto(e.target.value)}
+                  style={{ paddingLeft: '35px' }}
+                />
+                <i className="fa-solid fa-magnifying-glass position-absolute text-muted" style={{ top: '12px', left: '12px' }}></i>
+              </div>
+            </Form.Group>
+          </Col>
+          <Col md={4}>
+            <Form.Group>
+              <Form.Label className="small text-muted fw-bold">Estado</Form.Label>
+              <Form.Select 
+                value={filtroEstado} 
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                className={filtroEstado === 'no_leidos' ? 'text-primary fw-bold border-primary' : ''}
+              >
+                <option value="todos">Todos los mensajes</option>
+                <option value="no_leidos">📩 No Leídos</option>
+                <option value="leidos">📨 Leídos</option>
+              </Form.Select>
+            </Form.Group>
+          </Col>
+        </Row>
+      </div>
 
       <div className="table-responsive shadow-sm bg-white rounded">
         <Table hover className="mb-0 align-middle">
@@ -92,10 +139,8 @@ function AdminMensajes() {
             </tr>
           </thead>
           <tbody>
-            {mensajesFiltrados.map((m) => {
-              // Estilo condicional: Negrita si no está leído
+            {mensajesVisibles.map((m) => {
               const estiloNoLeido = !m.leido ? { fontWeight: 'bold', color: '#000' } : { color: '#6c757d' };
-              
               return (
                 <tr key={m.id} className={!m.leido ? "bg-white" : "bg-light"}>
                   <td>
@@ -117,7 +162,6 @@ function AdminMensajes() {
                   </td>
                   <td>
                     <div className="d-flex gap-2">
-                      {/* BOTÓN GRANDE: LEER */}
                       <Button 
                         variant={!m.leido ? "primary" : "outline-secondary"} 
                         size="sm" 
@@ -128,8 +172,6 @@ function AdminMensajes() {
                         <i className={`fa-solid ${!m.leido ? 'fa-envelope' : 'fa-envelope-open'} me-1`}></i> 
                         Leer
                       </Button>
-
-                      {/* BOTÓN GRANDE: ELIMINAR */}
                       <Button 
                         variant="outline-danger" 
                         size="sm" 
@@ -144,14 +186,23 @@ function AdminMensajes() {
                 </tr>
               );
             })}
-            {mensajesFiltrados.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-5 text-muted">No hay mensajes.</td></tr>
+            {mensajesVisibles.length === 0 && (
+                <tr><td colSpan={5} className="text-center py-5 text-muted">No se encontraron mensajes con estos filtros.</td></tr>
             )}
           </tbody>
         </Table>
       </div>
 
-      {/* --- MODAL DE LECTURA --- */}
+      {/* BOTÓN VER MÁS */}
+      {mensajesFiltrados.length > visibleCount && (
+        <div className="text-center mt-4">
+            <Button variant="outline-primary" onClick={() => setVisibleCount(prev => prev + 25)}>
+                <i className="fa-solid fa-eye me-2"></i> Ver más mensajes ({mensajesFiltrados.length - visibleCount} restantes)
+            </Button>
+        </div>
+      )}
+
+      {/* --- MODAL DETALLE --- */}
       <Modal show={showModalDetalle} onHide={() => setShowModalDetalle(false)} size="lg" centered>
         <Modal.Header closeButton className="bg-light">
           <Modal.Title className="logo-text text-primary">
@@ -177,7 +228,6 @@ function AdminMensajes() {
                     <strong>{mensajeSeleccionado.fecha}</strong>
                 </div>
               </div>
-
               <Card className="bg-light border-0 shadow-sm">
                 <Card.Body className="p-4" style={{ whiteSpace: 'pre-wrap', fontSize: '1.05rem', lineHeight: '1.6', color: '#333' }}>
                     {mensajeSeleccionado.comentario}
@@ -188,20 +238,17 @@ function AdminMensajes() {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowModalDetalle(false)}>Cerrar</Button>
-          {/* BOTÓN RESPONDER (Abre el cliente de correo del PC) */}
           <Button variant="primary" href={`mailto:${mensajeSeleccionado?.email}?subject=Respuesta%20Pastelería%20Mil%20Sabores`}>
             <i className="fa-solid fa-reply me-2"></i> Responder
           </Button>
         </Modal.Footer>
       </Modal>
 
-      {/* MODAL ELIMINAR */}
       <ModalConfirmacion show={showModalEliminar} titulo="Eliminar Mensaje" onCancelar={() => setShowModalEliminar(false)} onConfirmar={confirmDelete}>
         <Alert variant="danger" className="text-center mb-0 border-0">
             ¿Borrar el mensaje de <strong>{mensajeAEliminar?.nombre}</strong>?
         </Alert>
       </ModalConfirmacion>
-
     </div>
   );
 }
