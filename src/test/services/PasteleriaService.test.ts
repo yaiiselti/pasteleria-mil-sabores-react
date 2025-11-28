@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'vitest';
-import { getProductos, getProductoByCodigo, getUsuarios, getAllPedidos,saveResena } from '../../services/PasteleriaService';
-
+import { getProductos, getProductoByCodigo,  getAllPedidos,saveResena } from '../../services/PasteleriaService';
+import { getUsuarios } from '../../services/AdminService';
 describe('PasteleriaService - Lógica de Datos', () => {
     
     beforeEach(() => {
@@ -58,3 +58,24 @@ test('getAllPedidos: Debe devolver un array (vacío o con datos)', async () => {
         // No debe lanzar error
         await expect(saveResena(nuevaResena)).resolves.not.toThrow();
     });
+
+    // ... (imports y tests anteriores) ...
+
+    // NUEVO TEST: Verificar toggle de estado
+    test('5. toggleEstadoProducto debe cambiar el estado activo/inactivo', async () => {
+        // 1. Obtenemos un producto inicial (TC001 debería ser true)
+        let producto = await getProductoByCodigo('TC001');
+        const estadoInicial = producto.activo;
+
+        // 2. Ejecutamos el toggle (debería cambiar a false)
+        // Nota: Necesitas importar toggleEstadoProducto arriba si no lo has hecho
+        const { toggleEstadoProducto } = await import('../../services/PasteleriaService');
+        const nuevoEstado = await toggleEstadoProducto('TC001');
+
+        expect(nuevoEstado).toBe(!estadoInicial);
+
+        // 3. Verificamos que se guardó en la "BD"
+        const productoActualizado = await getProductoByCodigo('TC001');
+        expect(productoActualizado.activo).toBe(!estadoInicial);
+    });
+// ...

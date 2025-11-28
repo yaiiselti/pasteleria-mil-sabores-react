@@ -4,12 +4,15 @@ import { useCarrito } from '../hooks/useCarrito';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { REGIONES_CHILE } from '../Data/regiones';
+import { getProductos } from '../services/PasteleriaService';
+import { useNotification } from '../context/NotificationContext';
 
 function Checkout() {
   
   const { items, totalPrecio, subtotal, descuentoTotal, vaciarCarrito } = useCarrito();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { showNotification } = useNotification(); // Hook de notificaciones
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -20,12 +23,11 @@ function Checkout() {
     tarjeta: '',
     medioPago: '',
     fechaEntrega: '',
-    comprobante: '' // <--- NUEVO CAMPO
+    comprobante: '' 
   });
 
   const [errores, setErrores] = useState<any>({});
 
-  // Autocompletar datos del usuario
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -38,7 +40,6 @@ function Checkout() {
     }
   }, [user]);
 
-  // Advertencia al salir
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (items.length > 0) {
@@ -90,7 +91,6 @@ function Checkout() {
         esValido = false;
     }
 
-    // Validación WebPay
     if (formData.medioPago === 'webpay') {
         const tarjetaLimpia = formData.tarjeta.replace(/\s/g, '');
         if (!/^\d{16}$/.test(tarjetaLimpia)) {
@@ -99,7 +99,6 @@ function Checkout() {
         }
     }
 
-    // Validación Transferencia (NUEVO)
     if (formData.medioPago === 'transferencia') {
         if (!formData.comprobante.trim()) {
             nuevosErrores.comprobante = 'Debes ingresar el número de operación.';
@@ -111,10 +110,41 @@ function Checkout() {
     return esValido;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (validar()) {
+      
+      // --- 2. VALIDACIÓN DE DISPONIBILIDAD (NOVEDAD) ---
+      try {
+        // Traemos la lista fresca de productos
+        const productosActuales = await getProductos();
+        
+        // Buscamos si hay algún producto en el carrito que ya no esté activo
+        const productosConflictivos = items.filter(itemCarrito => {
+            const productoReal = productosActuales.find(p => p.codigo === itemCarrito.codigo);
+            // Es conflicto si: No existe OR activo es false
+            return !productoReal || productoReal.activo === false;
+        });
+
+        if (productosConflictivos.length > 0) {
+            // ¡ALERTA! Hay productos "zombies" en el carrito
+            const nombres = productosConflictivos.map(p => p.nombre).join(", ");
+            
+            showNotification(`Lo sentimos, los siguientes productos ya no están disponibles: ${nombres}. Por favor, revísalos en tu carrito.`, 'danger');
+            
+            // Opcional: Podríamos borrarlos automáticamente o redirigir al carrito
+            // navigate('/carrito'); 
+            return; // DETENEMOS LA COMPRA
+        }
+
+      } catch (error) {
+        console.error("Error al validar disponibilidad", error);
+        showNotification("Error técnico al validar el pedido. Intente nuevamente.", 'danger');
+        return;
+      }
+      // --------------------------------------------------
+
       const ahora = new Date();
       const nuevaOrden = {
         id: Math.floor(Math.random() * 1000000),
@@ -126,7 +156,6 @@ function Checkout() {
         subtotal: subtotal,
         descuento: descuentoTotal,
         total: totalPrecio,
-        
         estado: 'Pendiente' 
       };
 
@@ -142,6 +171,8 @@ function Checkout() {
 
       vaciarCarrito();
       navigate('/confirmacion', { replace: true });
+    } else {
+      showNotification("Hay errores en el formulario. Revisa los campos.", 'warning');
     }
   };
 
@@ -264,7 +295,6 @@ function Checkout() {
                           <li><strong>Correo:</strong> pagos@milsabores.cl</li>
                         </ul>
                         
-                        {/* CAMPO OBLIGATORIO PARA VALIDAR TRANSFERENCIA */}
                         <Form.Group controlId="comprobante">
                           <Form.Label className="fw-bold text-dark small">Nº de Operación / Comprobante:</Form.Label>
                           <Form.Control 

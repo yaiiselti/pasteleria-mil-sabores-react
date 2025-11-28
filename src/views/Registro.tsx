@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Container, Row, Col, Form, Button, Card, Alert } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { saveUsuario } from '../services/PasteleriaService';
-import type { IUsuario } from '../services/PasteleriaService';
+import { saveUsuario } from '../services/AdminService';
+import type { IUsuario } from '../services/AdminService';
 import { REGIONES_CHILE } from '../Data/regiones';
+import { getUsuarios } from '../services/AdminService'; //
 
 function Registro() {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ function Registro() {
     const nuevosErrores: any = {};
     let esValido = true;
 
-    // Validaciones básicas
+    // 1. Validaciones de Formato (Básicas)
     if (!formData.run.trim()) { nuevosErrores.run = 'El RUN es obligatorio'; esValido = false; }
     if (!formData.nombre.trim()) { nuevosErrores.nombre = 'El nombre es obligatorio'; esValido = false; }
     if (!formData.apellidos.trim()) { nuevosErrores.apellidos = 'El apellido es obligatorio'; esValido = false; }
@@ -50,59 +51,82 @@ function Registro() {
     if (formData.password !== formData.confirmPassword) { nuevosErrores.confirmPassword = 'No coinciden'; esValido = false; }
     if (!formData.fechaNacimiento) { nuevosErrores.fechaNacimiento = 'Fecha requerida'; esValido = false; }
 
-    setErrores(nuevosErrores);
+    // Si falla algo básico, mostramos errores y cortamos aquí para no llamar a la BD
+    if (!esValido) {
+      setErrores(nuevosErrores);
+      return;
+    }
 
-    if (esValido) {
-      try {
-        // Lógica de Negocio
-        let mensaje = "¡Registro exitoso! ";
-        const hoy = new Date();
-        const cumple = new Date(formData.fechaNacimiento);
-        let edad = hoy.getFullYear() - cumple.getFullYear();
-        const m = hoy.getMonth() - cumple.getMonth();
-        if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) edad--;
-
-        if (edad >= 50) {
-          localStorage.setItem('descuentoEdad', 'true');
-          mensaje += "✅ Tienes 50% dcto por edad. ";
-        } else {
-          localStorage.removeItem('descuentoEdad');
-        }
-
-        if (formData.codigoPromo.trim().toUpperCase() === 'FELICES50') {
-          localStorage.setItem('descuentoCodigo', 'true');
-          mensaje += "✅ Código 'FELICES50' aplicado.";
-        } else {
-          localStorage.removeItem('descuentoCodigo');
-        }
-
-        // Guardar
-        const nuevoUsuario: IUsuario = {
-          run: formData.run,
-          nombre: formData.nombre,
-          apellidos: formData.apellidos,
-          email: formData.email,
-          password: formData.password,
-          tipo: 'Cliente',
-          region: formData.region,
-          comuna: formData.comuna,
-          fechaNacimiento: formData.fechaNacimiento,
-          codigoPromo: formData.codigoPromo.trim().toUpperCase()
-        };
-        await saveUsuario(nuevoUsuario);
-
-        // --- AQUÍ ESTÁ TU AVISO VISIBLE ---
-        setAvisoExito(mensaje); // Muestra el Alert verde
-
-        // Esperamos un poco más (3 segundos) para que alcancen a leer
-        setTimeout(() => navigate('/login'), 3000);
-
-      } catch (error) {
-        console.error(error);
+    // 2. Validaciones de Negocio (Async - Verificar duplicados)
+    try {
+      const usuariosExistentes = await getUsuarios();
+      
+      // Revisar si el RUN ya existe
+      const runExiste = usuariosExistentes.some(u => u.run.toLowerCase() === formData.run.toLowerCase().trim());
+      if (runExiste) {
+        setErrores({ ...nuevosErrores, run: 'Este RUN ya está registrado.' });
+        return; // Cortamos
       }
+
+      // Revisar si el Email ya existe
+      const emailExiste = usuariosExistentes.some(u => u.email.toLowerCase() === formData.email.toLowerCase().trim());
+      if (emailExiste) {
+        setErrores({ ...nuevosErrores, email: 'Este correo ya está registrado.' });
+        return; // Cortamos
+      }
+
+      // --- SI LLEGAMOS AQUÍ, TODO ESTÁ CORRECTO ---
+      let mensaje = "¡Registro exitoso! ";
+      
+      // Lógica de Edad para descuento
+      const hoy = new Date();
+      const cumple = new Date(formData.fechaNacimiento);
+      let edad = hoy.getFullYear() - cumple.getFullYear();
+      const m = hoy.getMonth() - cumple.getMonth();
+      if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) edad--;
+
+      if (edad >= 50) {
+        localStorage.setItem('descuentoEdad', 'true');
+        mensaje += "✅ Tienes 50% dcto por edad. ";
+      } else {
+        localStorage.removeItem('descuentoEdad');
+      }
+
+      // Lógica de Cupón
+      if (formData.codigoPromo.trim().toUpperCase() === 'FELICES50') {
+        localStorage.setItem('descuentoCodigo', 'true');
+        mensaje += "✅ Código 'FELICES50' aplicado.";
+      } else {
+        localStorage.removeItem('descuentoCodigo');
+      }
+
+      // 3. Guardar Usuario en "Base de Datos"
+      const nuevoUsuario: IUsuario = {
+        run: formData.run,
+        nombre: formData.nombre,
+        apellidos: formData.apellidos,
+        email: formData.email,
+        password: formData.password,
+        tipo: 'Cliente',
+        region: formData.region,
+        comuna: formData.comuna,
+        fechaNacimiento: formData.fechaNacimiento,
+        codigoPromo: formData.codigoPromo.trim().toUpperCase()
+      };
+      
+      await saveUsuario(nuevoUsuario);
+
+      // 4. Mostrar Éxito y Redirigir
+      setAvisoExito(mensaje); // Muestra el Alert verde
+      setTimeout(() => navigate('/login'), 3000); // Redirige tras 3 segundos
+
+    } catch (error) {
+      console.error("Error en registro:", error);
+      // Opcional: mostrar un error genérico en la UI
     }
   };
 
+  
   return (
     <Container className="py-5">
       <Row className="justify-content-center">

@@ -1,23 +1,31 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { getUsuarios } from '../services/PasteleriaService';
+import { getUsuarios } from '../services/AdminService';
 
-// 1. Interfaz de Sesión (Con datos reales)
 interface UserSession {
+  run: string;
   email: string;
   nombre: string;
-  apellidos?: string; // <--- NUEVO
+  apellidos?: string;
   rol: 'Cliente' | 'Administrador';
-  region?: string;    // <--- NUEVO
-  comuna?: string;    // <--- NUEVO
+  region?: string;
+  comuna?: string;
   fechaNacimiento?: string;
   codigoPromo?: string;
+}
+
+// 1. ACTUALIZAMOS LA INTERFAZ DE RESPUESTA
+interface LoginResponse {
+  success: boolean;
+  message: string;
+  rol?: 'Cliente' | 'Administrador';
+  run?: string; // <--- AGREGAMOS ESTO
 }
 
 interface AuthContextType {
   user: UserSession | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  login: (email: string, password: string) => Promise<LoginResponse>;
   logout: () => void;
   updateUserSession: (newData: Partial<UserSession>) => void;
 }
@@ -35,10 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  // --- CORRECCIÓN AQUÍ ---
-  // Creamos la variable derivada para saber si está autenticado
   const isAuthenticated = !!user; 
-  // -----------------------
 
   useEffect(() => {
     if (user) {
@@ -48,21 +53,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<LoginResponse> => {
     const usuarios = await getUsuarios();
-    const usuarioEncontrado = usuarios.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-    // Admin Hardcoded
-    if (email === 'admin@duoc.cl' && password === 'admin') {
-       const adminUser: UserSession = { email, nombre: 'Administrador', rol: 'Administrador' };
-       setUser(adminUser);
-       return { success: true, message: 'Bienvenido Admin' };
-    }
+    const usuarioEncontrado = usuarios.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
 
     if (usuarioEncontrado) {
         if (usuarioEncontrado.password === password) {
             
             const sessionData: UserSession = {
+                run: usuarioEncontrado.run,
                 email: usuarioEncontrado.email,
                 nombre: usuarioEncontrado.nombre,
                 apellidos: usuarioEncontrado.apellidos,
@@ -74,7 +73,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             };
             
             setUser(sessionData);
-            return { success: true, message: `Bienvenido ${usuarioEncontrado.nombre}` };
+            
+            // 2. DEVOLVEMOS EL RUN AQUÍ DIRECTAMENTE
+            return { 
+              success: true, 
+              message: `Bienvenido ${usuarioEncontrado.nombre}`,
+              rol: usuarioEncontrado.tipo,
+              run: usuarioEncontrado.run // <--- ¡AQUÍ ESTÁ LA CLAVE!
+            };
         } else {
             return { success: false, message: 'Contraseña incorrecta' };
         }
@@ -83,9 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserSession = (newData: Partial<UserSession>) => {
-    if (user) {
-      setUser({ ...user, ...newData });
-    }
+    if (user) setUser({ ...user, ...newData });
   };
 
   const logout = () => {
@@ -93,13 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, // ¡Ahora sí funciona porque la variable existe!
-      login, 
-      logout, 
-      updateUserSession 
-    }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, updateUserSession }}>
       {children}
     </AuthContext.Provider>
   );
@@ -107,8 +105,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth debe usarse dentro de un AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth debe usarse dentro de un AuthProvider');
   return context;
 };

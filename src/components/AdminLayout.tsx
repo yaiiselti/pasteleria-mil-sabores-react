@@ -54,6 +54,9 @@ function AdminLayout() {
               <Nav.Link as={Link} to="/admin/pedidos" active={isActive('/admin/pedidos')}>
                 <i className="fa-solid fa-receipt me-2"></i> Pedidos
               </Nav.Link>
+              <Nav.Link as={Link} to="/admin/mensajes" active={isActive('/admin/mensajes')}>
+                <i className="fa-solid fa-envelope me-2"></i> Mensajes
+              </Nav.Link>
               {/* 4. BOTÓN CERRAR SESIÓN (MÓVIL) */}
               <Nav.Link onClick={handleLogout} className="text-danger fw-bold">
                 <i className="fa-solid fa-power-off me-2"></i> Cerrar Sesión
@@ -110,6 +113,13 @@ function AdminLayout() {
                     className={`px-3 py-2 rounded ${isActive('/admin/pedidos') ? "bg-primary text-white" : "text-dark"}`}
                   >
                     <i className="fa-solid fa-receipt me-2"></i> Pedidos
+                </Nav.Link>
+                
+                <Nav.Link 
+                  as={Link} to="/admin/mensajes" 
+                  className={`px-3 py-2 rounded ${isActive('/admin/mensajes') ? "bg-primary text-white" : "text-dark"}`}
+                >
+                  <i className="fa-solid fa-envelope me-2"></i> Mensajes
                 </Nav.Link>
 
                 <hr className="my-2" />

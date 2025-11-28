@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { getProductos, getCategorias } from '../services/PasteleriaService';
 import type { IProducto } from '../services/PasteleriaService';
 
+
 function Tienda() {
   
   const [productosDB, setProductosDB] = useState<IProducto[]>([]);
@@ -41,7 +42,9 @@ function Tienda() {
   }, []);
 
   useEffect(() => {
-    let temp = productosDB;
+    // 1. FILTRO BASE: Solo productos activos
+    // Si p.activo es undefined, lo tratamos como true por compatibilidad
+    let temp = productosDB.filter(p => p.activo !== false); 
 
     if (filtroCategoria !== 'todos') {
       temp = temp.filter(p => p.categoria === filtroCategoria);
@@ -52,7 +55,7 @@ function Tienda() {
     }
 
     setProductosFiltrados(temp);
-    setPaginaActual(1); // Volver a la página 1 si se aplica un filtro
+    setPaginaActual(1); 
   }, [filtroBusqueda, filtroCategoria, productosDB]);
 
   // --- 3. CÁLCULO DE PAGINACIÓN ---

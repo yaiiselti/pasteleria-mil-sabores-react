@@ -420,3 +420,44 @@ body {
 .pagination .page-link:focus {
     box-shadow: none !important;
 }
+
+/* --- AGREGAR AL FINAL DE src/index.css --- */
+
+/* UTILIDADES DE COLOR PERSONALIZADAS (Identidad Mil Sabores) */
+
+.text-choco {
+  color: var(--color-acento-choco) !important;
+}
+
+.bg-choco {
+  background-color: var(--color-acento-choco) !important;
+  color: var(--color-blanco);
+}
+
+.border-choco {
+  border-color: var(--color-acento-choco) !important;
+}
+
+.text-rosa {
+  color: #ff9eb5 !important; /* Un rosa un poco más oscuro para que se lea bien sobre blanco */
+}
+
+.bg-rosa-suave {
+  background-color: #fff0f3 !important; /* Fondo rosa muy pálido para tarjetas */
+}
+
+.bg-crema {
+  background-color: var(--color-fondo) !important; /* El color crema de fondo #FFF5E1 */
+}
+
+/* Efectos para el Home */
+.hover-scale:hover .card-bg-image {
+  transform: scale(1.1);
+}
+.hover-scale {
+  cursor: pointer;
+}
+/* Overlay café para el Hero, más cálido que el negro */
+.overlay-warm {
+  background: rgba(93, 64, 55, 0.6); /* --color-texto-principal con transparencia */
+}

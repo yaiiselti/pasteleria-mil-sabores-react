@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Row, Col, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom'; // Importamos Link para navegar
-import { getProductos, getUsuarios, getAllResenas, getAllPedidos } from '../../services/PasteleriaService';
+import { getProductos, getAllResenas, getAllPedidos } from '../../services/PasteleriaService';
+import { getUsuarios } from '../../services/AdminService';
+import { getAllMensajes } from '../../services/ContactoService'; 
 
 function AdminDashboard() {
   // Estados para guardar los conteos reales
@@ -9,6 +11,7 @@ function AdminDashboard() {
   const [totalUsuarios, setTotalUsuarios] = useState(0);
   const [totalResenas, setTotalResenas] = useState(0);
   const [totalPedidos, setTotalPedidos] = useState(0);
+  const [totalMensajes, setTotalMensajes] = useState(0);
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -17,10 +20,12 @@ function AdminDashboard() {
       const users = await getUsuarios();
       const reviews = await getAllResenas();
       const pedidos = await getAllPedidos();
+      const mensajes = await getAllMensajes(); 
       setTotalProductos(prods.length);
       setTotalUsuarios(users.length);
       setTotalResenas(reviews.length);
       setTotalPedidos(pedidos.length);
+      setTotalMensajes(mensajes.length);
     };
     cargarDatos();
   }, []);
@@ -109,6 +114,24 @@ function AdminDashboard() {
         <Col md={4}>
           <Card
             as={Link}
+            to="/admin/mensajes"
+            className="border-0 shadow-sm text-white bg-secondary h-100 text-decoration-none"
+            style={{ transition: 'transform 0.2s' }}
+          >
+            <Card.Body className="d-flex flex-column justify-content-center align-items-center py-5">
+              <i className="fa-solid fa-envelope fa-3x mb-3 opacity-75"></i>
+              <h1 className="display-4 fw-bold mb-0">{totalMensajes}</h1>
+              <p className="mb-0 fs-5 text-white-50">Mensajes</p>
+              <span className="mt-3 btn btn-light btn-sm rounded-pill px-3 text-secondary fw-bold">
+                Gestionar <i className="fa-solid fa-arrow-right ms-1"></i>
+              </span>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col md={4}>
+          <Card
+            as={Link}
             to="/"
             className="border-0 shadow-sm text-white bg-warning h-100 text-decoration-none"
             style={{ transition: 'transform 0.2s' }}
@@ -123,6 +146,7 @@ function AdminDashboard() {
             </Card.Body>
           </Card>
         </Col>
+        
 
       </Row>
     </div>

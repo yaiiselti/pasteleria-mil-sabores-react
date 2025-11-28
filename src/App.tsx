@@ -29,6 +29,7 @@ import AdminUsuarios from './views/admin/AdminUsuarios';
 import AdminUsuarioForm from './views/admin/AdminUsuarioForm';
 import AdminResenas from './views/admin/AdminResenas';
 import AdminPedidos from './views/admin/AdminPedidos';
+import AdminMensajes from './views/admin/AdminMensajes'; 
 
 // Componente de Seguridad
 import RutaProtegida from './components/RutaProtegida'; // <--- IMPORTAR
@@ -88,6 +89,7 @@ function App() {
             <Route path="usuarios/editar/:run" element={<AdminUsuarioForm />} />
             <Route path="resenas" element={<AdminResenas />} />
             <Route path="pedidos" element={<AdminPedidos />} />
+            <Route path="mensajes" element={<AdminMensajes />} />
           </Route>
         </Route>
 

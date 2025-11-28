@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Alert, Form, Row, Col, Badge } from 'react-bootstrap';
+import { Table, Button, Alert, Form, Row, Col, Badge, Modal } from 'react-bootstrap';
 import { getAllResenas, deleteResena} from '../../services/PasteleriaService';
 import type{ IResena } from '../../services/PasteleriaService';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
@@ -7,16 +7,18 @@ import { StarRating } from '../../components/StarRating';
 
 function AdminResenas() {
   const [resenas, setResenas] = useState<IResena[]>([]);
-  
   const [filtroTexto, setFiltroTexto] = useState('');
   const [filtroEstrellas, setFiltroEstrellas] = useState('todas');
 
-  const [showModal, setShowModal] = useState(false);
+  const [showModalEliminar, setShowModalEliminar] = useState(false);
   const [resenaAEliminar, setResenaAEliminar] = useState<IResena | null>(null);
+
+  // Modal Detalle
+  const [showModalDetalle, setShowModalDetalle] = useState(false);
+  const [resenaSeleccionada, setResenaSeleccionada] = useState<IResena | null>(null);
 
   const cargarDatos = async () => {
     const data = await getAllResenas();
-
     setResenas(data.reverse());
   };
 
@@ -31,24 +33,27 @@ function AdminResenas() {
       r.emailUsuario.toLowerCase().includes(texto) ||
       r.codigoProducto.toLowerCase().includes(texto) ||
       r.comentario.toLowerCase().includes(texto);
-
     const coincideEstrellas = 
       filtroEstrellas === 'todas' || r.calificacion.toString() === filtroEstrellas;
-
     return coincideTexto && coincideEstrellas;
   });
 
   const handleDeleteClick = (resena: IResena) => {
     setResenaAEliminar(resena);
-    setShowModal(true);
+    setShowModalEliminar(true);
   };
 
   const confirmDelete = async () => {
     if (resenaAEliminar) {
       await deleteResena(resenaAEliminar.id);
       await cargarDatos();
-      setShowModal(false);
+      setShowModalEliminar(false);
     }
+  };
+
+  const handleVerDetalle = (resena: IResena) => {
+    setResenaSeleccionada(resena);
+    setShowModalDetalle(true);
   };
 
   return (
@@ -61,34 +66,21 @@ function AdminResenas() {
             <Form.Group>
               <Form.Label className="small text-muted fw-bold">Buscar</Form.Label>
               <div className="position-relative">
-                <Form.Control 
-                  type="text" 
-                  placeholder="Buscar por usuario, producto o palabra clave..." 
-                  value={filtroTexto}
-                  onChange={(e) => setFiltroTexto(e.target.value)}
-                  style={{ paddingLeft: '35px' }}
-                />
-                <i 
-                  className="fa-solid fa-magnifying-glass position-absolute text-muted" 
-                  style={{ top: '12px', left: '12px' }}
-                ></i>
+                <Form.Control type="text" placeholder="Buscar..." value={filtroTexto} onChange={(e) => setFiltroTexto(e.target.value)} style={{ paddingLeft: '35px' }} />
+                <i className="fa-solid fa-magnifying-glass position-absolute text-muted" style={{ top: '12px', left: '12px' }}></i>
               </div>
             </Form.Group>
           </Col>
-          
           <Col md={4}>
             <Form.Group>
               <Form.Label className="small text-muted fw-bold">Calificación</Form.Label>
-              <Form.Select 
-                value={filtroEstrellas} 
-                onChange={(e) => setFiltroEstrellas(e.target.value)}
-              >
-                <option value="todas">Todas las calificaciones</option>
-                <option value="5">⭐⭐⭐⭐⭐ (Excelentes)</option>
-                <option value="4">⭐⭐⭐⭐ (Buenas)</option>
-                <option value="3">⭐⭐⭐ (Regulares)</option>
-                <option value="2">⭐⭐ (Malas)</option>
-                <option value="1">⭐ (Pésimas)</option>
+              <Form.Select value={filtroEstrellas} onChange={(e) => setFiltroEstrellas(e.target.value)}>
+                <option value="todas">Todas</option>
+                <option value="5">⭐⭐⭐⭐⭐</option>
+                <option value="4">⭐⭐⭐⭐</option>
+                <option value="3">⭐⭐⭐</option>
+                <option value="2">⭐⭐</option>
+                <option value="1">⭐</option>
               </Form.Select>
             </Form.Group>
           </Col>
@@ -111,74 +103,85 @@ function AdminResenas() {
             {resenasFiltradas.map((r) => (
               <tr key={r.id}>
                 <td className="text-nowrap small">{r.fecha}</td>
-                
-                <td>
-                  <Badge bg="light" text="dark" className="border">
-                    {r.codigoProducto}
-                  </Badge>
-                </td>
-                
+                <td><Badge bg="light" text="dark" className="border">{r.codigoProducto}</Badge></td>
                 <td>
                   <div className="fw-bold small">{r.nombreUsuario}</div>
                   <div className="text-muted" style={{ fontSize: '0.75rem' }}>{r.emailUsuario}</div>
                 </td>
-                
-                <td style={{ minWidth: '110px' }}>
-                  <StarRating calificacion={r.calificacion} />
-                </td>
-                
+                <td style={{ minWidth: '110px' }}><StarRating calificacion={r.calificacion} /></td>
                 <td>
-                  <div 
-                    className="text-truncate text-secondary fst-italic" 
-                    style={{ maxWidth: '250px' }} 
-                    title={r.comentario}
-                  >
+                  <div className="text-truncate text-secondary fst-italic" style={{ maxWidth: '250px' }} title={r.comentario}>
                     "{r.comentario}"
                   </div>
                 </td>
-                
                 <td>
-                  <Button 
-                    variant="outline-danger" 
-                    size="sm" 
-                    onClick={() => handleDeleteClick(r)}
-                    title="Eliminar Reseña"
-                    className="d-flex align-items-center gap-2"
-                  >
-                    <i className="fa-solid fa-trash"></i> 
-                    <span className="d-none d-lg-inline">Eliminar</span>
-                  </Button>
+                  <div className="d-flex gap-2">
+                    {/* BOTÓN GRANDE: VER */}
+                    <Button 
+                      variant="outline-secondary" 
+                      size="sm" 
+                      onClick={() => handleVerDetalle(r)} 
+                      className="px-3"
+                      title="Ver Completo"
+                    >
+                      <i className="fa-solid fa-eye me-1"></i> Ver
+                    </Button>
+
+                    {/* BOTÓN GRANDE: ELIMINAR */}
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm" 
+                      onClick={() => handleDeleteClick(r)} 
+                      className="px-3"
+                      title="Eliminar"
+                    >
+                      <i className="fa-solid fa-trash me-1"></i> Eliminar
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
-            
-            {resenasFiltradas.length === 0 && (
-              <tr>
-                <td colSpan={6} className="text-center py-5 text-muted">
-                  <i className="fa-solid fa-filter-circle-xmark fa-3x mb-3 text-secondary opacity-50"></i>
-                  <p>No se encontraron reseñas con esos filtros.</p>
-                </td>
-              </tr>
-            )}
           </tbody>
         </Table>
       </div>
 
-      <ModalConfirmacion
-        show={showModal}
-        titulo="Eliminar Reseña"
-        onCancelar={() => setShowModal(false)}
-        onConfirmar={confirmDelete}
-      >
+      {/* Modal Detalle */}
+      <Modal show={showModalDetalle} onHide={() => setShowModalDetalle(false)} centered>
+        <Modal.Header closeButton className="bg-light">
+          <Modal.Title className="logo-text text-secondary">Opinión de Cliente</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          {resenaSeleccionada && (
+            <>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="mb-0 fw-bold">{resenaSeleccionada.nombreUsuario}</h5>
+                <span className="text-muted small">{resenaSeleccionada.fecha}</span>
+              </div>
+              <div className="mb-3">
+                <StarRating calificacion={resenaSeleccionada.calificacion} />
+                <span className="ms-2 badge bg-light text-dark border">
+                  Producto: {resenaSeleccionada.codigoProducto}
+                </span>
+              </div>
+              <div className="p-3 bg-light rounded border fst-italic text-secondary">
+                <i className="fa-solid fa-quote-left me-2 text-muted opacity-50"></i>
+                {resenaSeleccionada.comentario}
+                <i className="fa-solid fa-quote-right ms-2 text-muted opacity-50"></i>
+              </div>
+              <div className="mt-3 text-end small text-muted">
+                Email: {resenaSeleccionada.emailUsuario}
+              </div>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModalDetalle(false)}>Cerrar</Button>
+        </Modal.Footer>
+      </Modal>
+
+      <ModalConfirmacion show={showModalEliminar} titulo="Eliminar Reseña" onCancelar={() => setShowModalEliminar(false)} onConfirmar={confirmDelete}>
         <Alert variant="danger" className="text-center mb-0 border-0">
-          <div className="mb-3">
-            <i className="fa-solid fa-circle-exclamation fa-3x text-danger"></i>
-          </div>
-          <h5>¿Estás seguro?</h5>
-          <p className="mb-0">
-            Vas a eliminar la opinión de <strong>{resenaAEliminar?.nombreUsuario}</strong> sobre el producto <strong>{resenaAEliminar?.codigoProducto}</strong>.
-          </p>
-          <small className="d-block mt-2 text-muted">Esta acción no se puede deshacer.</small>
+          ¿Estás seguro de eliminar esta opinión?
         </Alert>
       </ModalConfirmacion>
     </div>
