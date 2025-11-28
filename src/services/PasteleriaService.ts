@@ -408,6 +408,8 @@ export interface IPedido {
     comuna: string;
     medioPago: string;
   };
+  subtotal?: number;
+  descuento?: number;
   total: number;
   estado: 'Pendiente' | 'En Preparación' | 'En Reparto' | 'Entregado' | 'Cancelado';
   productos: any[];
@@ -433,6 +435,8 @@ export const getAllPedidos = async (): Promise<IPedido[]> => {
   return cargarPedidosBD();
 };
 
+
+
 export const updateEstadoPedido = async (id: number, nuevoEstado: string): Promise<void> => {
   await new Promise(r => setTimeout(r, 500));
   const lista = cargarPedidosBD();
@@ -442,6 +446,18 @@ export const updateEstadoPedido = async (id: number, nuevoEstado: string): Promi
   // @ts-ignore
   guardarPedidosBD(listaActualizada);
 };
+
+export const updatePedidoProductos = async (idPedido: number, productosActualizados: any[]): Promise<void> => {
+    await new Promise(r => setTimeout(r, 500)); // Simular red
+    const lista = cargarPedidosBD();
+    
+    const listaNueva = lista.map(p => 
+        p.id === idPedido ? { ...p, productos: productosActualizados } : p
+    );
+    
+    guardarPedidosBD(listaNueva);
+};
+
 
 export const deletePedido = async (id: number): Promise<void> => {
   await new Promise(r => setTimeout(r, 500));

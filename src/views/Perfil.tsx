@@ -360,10 +360,31 @@ function Perfil() {
                     ))}
                 </ListGroup>
 
-                <div className="d-flex justify-content-between border-top pt-3 mt-3">
-                    <span className="fs-5">Total Pagado:</span>
-                    <span className="fs-4 fw-bold text-success">${pedidoSeleccionado.total.toLocaleString('es-CL')}</span>
+                {/* --- SECCIÓN DE TOTALES ACTUALIZADA CON DESCUENTO --- */}
+                <div className="border-top pt-3 mt-3">
+                    {(pedidoSeleccionado.descuento && pedidoSeleccionado.descuento > 0) ? (
+                        <>
+                            <div className="d-flex justify-content-between mb-1 text-muted">
+                                <span>Subtotal:</span>
+                                <span>${(pedidoSeleccionado.subtotal || 0).toLocaleString('es-CL')}</span>
+                            </div>
+                            <div className="d-flex justify-content-between mb-2 text-success">
+                                <span><i className="fa-solid fa-tag me-1"></i>Descuento:</span>
+                                <span>- ${(pedidoSeleccionado.descuento).toLocaleString('es-CL')}</span>
+                            </div>
+                            <div className="d-flex justify-content-between border-top pt-2">
+                                <span className="fs-5 fw-bold text-dark">Total Pagado:</span>
+                                <span className="fs-4 fw-bold text-success">${pedidoSeleccionado.total.toLocaleString('es-CL')}</span>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="d-flex justify-content-between">
+                            <span className="fs-5">Total Pagado:</span>
+                            <span className="fs-4 fw-bold text-success">${pedidoSeleccionado.total.toLocaleString('es-CL')}</span>
+                        </div>
+                    )}
                 </div>
+                {/* --------------------------------------------------- */}
 
                 {pedidoSeleccionado.estado === 'Pendiente' && (
                     <Alert variant="light" className="mt-4 border d-flex justify-content-between align-items-center">

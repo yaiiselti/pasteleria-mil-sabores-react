@@ -49,11 +49,11 @@ function Home() {
             <h1 className="display-3 fw-bold mb-3 logo-text text-white">Mil Sabores, Mil Momentos</h1>
             <p className="lead fs-4 mb-4">
                 Descubre la dulzura artesanal hecha con pasión y los ingredientes más frescos.
-                <br className="d-none d-md-block" />¡Recién horneado para ti!
+                <br className="d-none d-md-block" />Recien horneado para ti
             </p>
             <div className="d-flex justify-content-center gap-3 flex-column flex-sm-row px-4">
-                <Link to="/tienda" className="btn btn-warning btn-lg px-5 fw-bold rounded-pill shadow">
-                    <i className="fa-solid fa-basket-shopping me-2"></i> Ver Catálogo
+                <Link to="/tienda" className="btn btn-outline-light btn-lg px-5 fw-bold rounded-pill shadow">
+                    Ver Catálogo
                 </Link>
                 <Link to="/contacto" className="btn btn-outline-light btn-lg px-5 fw-bold rounded-pill">
                     Ubicación
@@ -62,7 +62,6 @@ function Home() {
         </Container>
       </section>
 
-      {/* 2. SECCIÓN DE BENEFICIOS */}
       <section className="bg-crema py-5">
         <Container>
             <Row className="g-4 text-center">
