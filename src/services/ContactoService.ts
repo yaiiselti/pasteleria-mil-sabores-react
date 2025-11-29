@@ -1,78 +1,89 @@
-// src/services/ContactoService.ts
+// URL BASE DEL BACKEND
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8085/api';
 
+// --- HERRAMIENTAS AUXILIARES ---
+const getToken = () => localStorage.getItem('token');
+
+// Función segura para headers (Igual que en los otros servicios)
+const authHeader = (): Record<string, string> => {
+  const token = getToken();
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
+// --- INTERFAZ ---
 export interface IMensajeContacto {
   id: number;
   nombre: string;
   email: string;
   comentario: string;
   fecha: string;
-  leido: boolean; // Para saber si es nuevo o no
+  leido: boolean;
 }
 
-const KEY_MENSAJES_DB = 'mensajesContacto';
+// ==========================================
+// FUNCIONES CONECTADAS (Usando las variables)
+// ==========================================
 
-// --- LÓGICA INTERNA (Helpers) ---
-
-const cargarMensajesBD = (): IMensajeContacto[] => {
+export const getAllMensajes = async (): Promise<IMensajeContacto[]> => {
   try {
-    const guardado = localStorage.getItem(KEY_MENSAJES_DB);
-    return guardado ? JSON.parse(guardado) : [];
-  } catch {
+    // Aquí usamos API_URL y authHeader
+    const res = await fetch(`${API_URL}/mensajes`, { 
+      method: 'GET',
+      headers: authHeader() 
+    });
+    return res.ok ? await res.json() : [];
+  } catch (error) {
+    console.error("Error cargando mensajes", error);
     return [];
   }
 };
 
-const guardarMensajesBD = (datos: IMensajeContacto[]) => {
-  localStorage.setItem(KEY_MENSAJES_DB, JSON.stringify(datos));
-};
-
-// --- FUNCIONES PÚBLICAS (API) ---
-
-// 1. Guardar un nuevo mensaje (Usado por el Cliente)
-export const saveMensaje = async (datos: { nombre: string; email: string; comentario: string }): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 800)); // Simular red
-  
-  const mensajes = cargarMensajesBD();
-  
-  const nuevoMensaje: IMensajeContacto = {
-    id: Date.now(),
-    fecha: new Date().toLocaleString(), // Fecha y hora actual
-    leido: false, // Por defecto no leído
-    ...datos
-  };
-
-  mensajes.push(nuevoMensaje);
-  guardarMensajesBD(mensajes);
-};
-
-// 2. Obtener todos los mensajes (Usado por el Admin)
-export const getAllMensajes = async (): Promise<IMensajeContacto[]> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return cargarMensajesBD();
-};
-
-// 3. Marcar mensaje como leído
-export const markAsRead = async (id: number): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const mensajes = cargarMensajesBD();
-  
-  const index = mensajes.findIndex(m => m.id === id);
-  if (index >= 0) {
-    mensajes[index].leido = true;
-    guardarMensajesBD(mensajes);
+export const saveMensaje = async (mensaje: any): Promise<boolean> => {
+  try {
+    // Usamos API_URL
+    const res = await fetch(`${API_URL}/mensajes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }, // Público, no requiere token
+      body: JSON.stringify(mensaje)
+    });
+    return res.ok;
+  } catch (error) {
+    console.error("Error enviando mensaje", error);
+    return false;
   }
 };
 
-// 4. Eliminar mensaje
-export const deleteMensaje = async (id: number): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  let mensajes = cargarMensajesBD();
-  mensajes = mensajes.filter(m => m.id !== id);
-  guardarMensajesBD(mensajes);
+export const markAsRead = async (id: number): Promise<boolean> => {
+  try {
+    // Usamos API_URL y authHeader
+    const res = await fetch(`${API_URL}/mensajes/${id}/leido`, {
+      method: 'PUT',
+      headers: authHeader()
+    });
+    return res.ok;
+  } catch (error) {
+    return false;
+  }
 };
 
-// 5. Obtener conteo de NO leídos (Para el Dashboard/Badge)
-export const getMensajesNoLeidosCount = async (): Promise<number> => {
-    const mensajes = cargarMensajesBD(); // Síncrono para ser rápido, o async si prefieres
-    return mensajes.filter(m => !m.leido).length;
+export const deleteMensaje = async (id: number): Promise<boolean> => {
+  try {
+    // Usamos API_URL y authHeader
+    const res = await fetch(`${API_URL}/mensajes/${id}`, {
+      method: 'DELETE',
+      headers: authHeader()
+    });
+    return res.ok;
+  } catch (error) {
+    return false;
+  }
 };

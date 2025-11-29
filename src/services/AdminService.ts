@@ -1,5 +1,15 @@
-// src/services/AdminService.ts
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8085/api';
 
+const getToken = () => localStorage.getItem('token');
+
+const authHeader = (): Record<string, string> => {
+  const token = getToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+};
+
+// Mantenemos la interfaz igual para no romper nada
 export interface IUsuario {
   run: string;
   nombre: string;
@@ -11,141 +21,57 @@ export interface IUsuario {
   comuna?: string;
   fechaNacimiento?: string;
   codigoPromo?: string;
-  pin?: string; // <--- NUEVO CAMPO: PIN de Seguridad
+  pin?: string;
 }
 
-// 1. SUPER ADMIN CONSTANTE (Con PIN inicial)
-const SUPER_ADMIN: IUsuario = {
-  run: "11223344-5",
-  nombre: "Admin",
-  apellidos: "MilSabores",
-  email: "admin@duoc.cl",
-  password: "admin",
-  tipo: "Administrador",
-  region: "Metropolitana",
-  comuna: "Providencia",
-  pin: "1234" // <--- PIN POR DEFECTO DEL JEFE (Cámbialo después si quieres)
-};
-
-const usuariosIniciales: IUsuario[] = [
-  {
-    run: "12345678-K",
-    nombre: "Ana",
-    apellidos: "González",
-    email: "ana.gonzalez@duoc.cl",
-    password: "1234",
-    tipo: "Cliente",
-    region: "Metropolitana",
-    comuna: "Santiago",
-    fechaNacimiento: "1960-05-10"
-  },
-  {
-    run: "98765432-1",
-    nombre: "Carlos",
-    apellidos: "Pérez",
-    email: "carlos.perez@gmail.com",
-    password: "1234",
-    tipo: "Cliente",
-    region: "Biobío",
-    comuna: "Concepción"
-  },
-  SUPER_ADMIN 
-];
-
-const KEY_USERS_DB = 'usuariosDB';
-
-// --- LÓGICA DE PERSISTENCIA ---
-
-const cargarUsuariosBD = (): IUsuario[] => {
-  try {
-    const guardado = localStorage.getItem(KEY_USERS_DB);
-    if (guardado) {
-      return JSON.parse(guardado);
-    }
-    localStorage.setItem(KEY_USERS_DB, JSON.stringify(usuariosIniciales));
-    return usuariosIniciales;
-  } catch (e) {
-    return usuariosIniciales;
-  }
-};
-
-const guardarUsuariosBD = (datos: IUsuario[]) => {
-  localStorage.setItem(KEY_USERS_DB, JSON.stringify(datos));
-};
-
-// --- FUNCIONES CRUD ---
-
+// 1. OBTENER TODOS LOS USUARIOS (Desde Backend)
 export const getUsuarios = async (): Promise<IUsuario[]> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  let usuarios = cargarUsuariosBD();
-
-  // AUTOCURACIÓN: Si borraron al admin, lo restauramos
-  const existeAdmin = usuarios.some(u => u.run === SUPER_ADMIN.run || u.email === SUPER_ADMIN.email);
-  
-  if (!existeAdmin) {
-    console.warn("⚠️ ALERTA: Restaurando Super Admin...");
-    usuarios.push(SUPER_ADMIN);
-    guardarUsuariosBD(usuarios);
-  }
-
-  return usuarios;
+  try {
+    // Si tienes token (admin), úsalo. Si no (registro), intenta sin token o ajusta permisos en backend.
+    // Asumimos que para registrarse necesitas validar duplicados, el backend debe permitirlo o el registro debe manejar el error.
+    const res = await fetch(`${API_URL}/usuarios`, { method: 'GET', headers: authHeader() });
+    return res.ok ? await res.json() : [];
+  } catch { return []; }
 };
 
-export const getUsuarioByRun = async (run: string): Promise<IUsuario> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const usuarios = await getUsuarios();
-  const usuario = usuarios.find(u => u.run === run);
-  if (!usuario) throw new Error('Usuario no encontrado');
-  return usuario;
+// 2. OBTENER USUARIO POR RUN
+export const getUsuarioByRun = async (run: string): Promise<IUsuario | null> => {
+  try {
+    const res = await fetch(`${API_URL}/usuarios/${run}`, { method: 'GET', headers: authHeader() });
+    return res.ok ? await res.json() : null;
+  } catch { return null; }
 };
 
-export const deleteUsuario = async (run: string): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  if (run === SUPER_ADMIN.run) {
-    throw new Error("Acción denegada: No se puede eliminar al Super Admin.");
-  }
-
-  let usuarios = cargarUsuariosBD();
-  usuarios = usuarios.filter(u => u.run !== run);
-  guardarUsuariosBD(usuarios);
-};
-
+// 3. GUARDAR USUARIO (Registro y Edición) -> AQUÍ OCURRE LA MAGIA
 export const saveUsuario = async (usuario: IUsuario): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  let usuarios = cargarUsuariosBD();
-
-  const index = usuarios.findIndex(u => u.run === usuario.run);
-
-  if (index >= 0) {
-    // Si editan al super admin, forzamos que siga siendo Admin
-    if (usuario.run === SUPER_ADMIN.run) {
-        usuario.tipo = 'Administrador'; 
-    }
-    
-    // PRESERVAR EL PIN: Si estamos editando desde un formulario que no tiene el campo PIN,
-    // debemos asegurarnos de no borrar el PIN que ya tenía el usuario.
-    const usuarioAntiguo = usuarios[index];
-    if (usuario.pin === undefined) {
-        usuario.pin = usuarioAntiguo.pin;
-    }
-
-    usuarios[index] = usuario; 
-  } else {
-    usuarios.push(usuario); 
-  }
-
-  guardarUsuariosBD(usuarios);
+  // Ajuste técnico: El backend espera 'tipo' como String, aquí lo mandamos.
+  await fetch(`${API_URL}/auth/register`, { // Usamos el endpoint público de registro
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, // No requiere token para registrarse
+    body: JSON.stringify(usuario)
+  });
 };
 
-// Nueva función exclusiva para actualizar el PIN
+// 4. ELIMINAR USUARIO
+export const deleteUsuario = async (run: string): Promise<void> => {
+  await fetch(`${API_URL}/usuarios/${run}`, {
+    method: 'DELETE',
+    headers: authHeader()
+  });
+};
+
+// 5. CAMBIAR PIN
 export const setUsuarioPin = async (run: string, newPin: string): Promise<void> => {
-    await new Promise(r => setTimeout(r, 300));
-    let usuarios = cargarUsuariosBD();
-    const index = usuarios.findIndex(u => u.run === run);
-    if (index >= 0) {
-        usuarios[index].pin = newPin;
-        guardarUsuariosBD(usuarios);
-    }
+  const usuario = await getUsuarioByRun(run);
+  if (usuario) {
+    // Reenviamos el usuario actualizado al backend
+    // Nota: Si usas /auth/register para actualizar, asegúrate que tu backend soporte update.
+    // Idealmente deberías tener un endpoint PUT /usuarios/{run}
+    // Por ahora, asumimos que el backend maneja el "save" como "update" si el ID existe.
+    await fetch(`${API_URL}/usuarios`, { 
+      method: 'POST', 
+      headers: authHeader(), 
+      body: JSON.stringify({ ...usuario, pin: newPin }) 
+    });
+  }
 };

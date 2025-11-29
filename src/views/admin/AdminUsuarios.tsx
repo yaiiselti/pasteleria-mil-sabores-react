@@ -11,18 +11,16 @@ function AdminUsuarios() {
   const [usuarios, setUsuarios] = useState<IUsuario[]>([]);
   const [filtro, setFiltro] = useState('');
   
-  // PAGINACIÓN "VER MÁS"
-  const [visibleCount, setVisibleCount] = useState(25);
-
+  // Modales
   const [showModalEliminar, setShowModalEliminar] = useState(false);
   const [usuarioAEliminar, setUsuarioAEliminar] = useState<IUsuario | null>(null);
   
   const [showModalDetalle, setShowModalDetalle] = useState(false);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<IUsuario | null>(null);
 
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth(); // Importamos logout para auto-eliminación
   const { showNotification } = useNotification();
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // Para redirigir tras auto-eliminación
   const SUPER_ADMIN_EMAIL = 'admin@duoc.cl';
 
   const cargarDatos = async () => {
@@ -34,25 +32,20 @@ function AdminUsuarios() {
     cargarDatos();
   }, []);
 
-  // Reiniciar paginación al filtrar
-  useEffect(() => {
-    setVisibleCount(25);
-  }, [filtro]);
-
   const usuariosFiltrados = usuarios.filter(u => 
     u.nombre.toLowerCase().includes(filtro.toLowerCase()) || 
     u.apellidos.toLowerCase().includes(filtro.toLowerCase()) ||
     u.run.toLowerCase().includes(filtro.toLowerCase())
   );
 
-  // USUARIOS VISIBLES
-  const usuariosVisibles = usuariosFiltrados.slice(0, visibleCount);
-
   const handleDeleteClick = (usuario: IUsuario) => {
+    // REGLA 1: El Super Admin es INTOCABLE
     if (usuario.email === SUPER_ADMIN_EMAIL) {
       showNotification('⛔ ACCIÓN DENEGADA: El Administrador Principal es intocable.', 'danger');
       return;
     }
+
+    // REGLA 2: Permitir borrar cualquier otro (incluso a uno mismo, con advertencia)
     setUsuarioAEliminar(usuario);
     setShowModalEliminar(true);
   };
@@ -61,10 +54,11 @@ function AdminUsuarios() {
     if (usuarioAEliminar) {
       await deleteUsuario(usuarioAEliminar.run);
       
+      // REGLA 3: Si me eliminé a mí mismo -> EXPULSIÓN INMEDIATA
       if (user && usuarioAEliminar.run === user.run) {
          setShowModalEliminar(false);
-         logout();
-         navigate('/login');
+         logout(); // Cerramos sesión
+         navigate('/login'); // Redirigimos al login
          showNotification('Tu cuenta ha sido eliminada. Sesión cerrada.', 'info');
          return;
       }
@@ -110,7 +104,7 @@ function AdminUsuarios() {
             </tr>
           </thead>
           <tbody>
-            {usuariosVisibles.map((u) => {
+            {usuariosFiltrados.map((u) => {
               const esSuperAdmin = u.email === SUPER_ADMIN_EMAIL;
               const soyYo = user?.run === u.run;
 
@@ -125,6 +119,7 @@ function AdminUsuarios() {
                   <td><Badge bg={u.tipo === 'Administrador' ? 'danger' : 'info'}>{u.tipo}</Badge></td>
                   <td>
                     <div className="d-flex gap-2">
+                      {/* BOTÓN VER FICHA */}
                       <Button 
                         variant="outline-secondary" 
                         size="sm" 
@@ -134,6 +129,8 @@ function AdminUsuarios() {
                       >
                         <i className="fa-solid fa-eye me-1"></i> Ficha
                       </Button>
+
+                      {/* BOTÓN EDITAR */}
                       <Link 
                         to={`/admin/usuarios/editar/${u.run}`} 
                         className="btn btn-outline-primary btn-sm px-3" 
@@ -141,12 +138,14 @@ function AdminUsuarios() {
                       >
                         <i className="fa-solid fa-pen me-1"></i> Editar
                       </Link>
+                      
+                      {/* BOTÓN ELIMINAR */}
                       <Button 
                         variant="outline-danger" 
                         size="sm" 
                         onClick={() => handleDeleteClick(u)}
                         className="px-3"
-                        disabled={esSuperAdmin}
+                        disabled={esSuperAdmin} // Solo deshabilitado visualmente para Super Admin
                         style={esSuperAdmin ? { cursor: 'not-allowed', opacity: 0.5 } : {}}
                         title={esSuperAdmin ? "No se puede eliminar" : "Eliminar Usuario"}
                       >
@@ -161,16 +160,7 @@ function AdminUsuarios() {
         </Table>
       </div>
 
-      {/* BOTÓN VER MÁS */}
-      {usuariosFiltrados.length > visibleCount && (
-        <div className="text-center mt-4">
-            <Button variant="outline-primary" onClick={() => setVisibleCount(prev => prev + 25)}>
-                <i className="fa-solid fa-eye me-2"></i> Ver más usuarios ({usuariosFiltrados.length - visibleCount} restantes)
-            </Button>
-        </div>
-      )}
-
-      {/* MODAL DETALLE */}
+      {/* MODAL DETALLE (Ficha Completa) */}
       <Modal show={showModalDetalle} onHide={() => setShowModalDetalle(false)} centered>
         <Modal.Header closeButton className="bg-light">
           <Modal.Title className="logo-text text-success">Ficha de Usuario</Modal.Title>
@@ -185,14 +175,20 @@ function AdminUsuarios() {
               <Row className="text-start border-top pt-3">
                 <Col xs={6} className="mb-2"><strong>RUN:</strong></Col>
                 <Col xs={6} className="mb-2 text-muted">{usuarioSeleccionado.run}</Col>
+                
                 <Col xs={6} className="mb-2"><strong>Email:</strong></Col>
                 <Col xs={6} className="mb-2 text-muted">{usuarioSeleccionado.email}</Col>
+                
                 <Col xs={6} className="mb-2"><strong>Región:</strong></Col>
                 <Col xs={6} className="mb-2 text-muted">{usuarioSeleccionado.region || 'No especificada'}</Col>
+                
                 <Col xs={6} className="mb-2"><strong>Comuna:</strong></Col>
                 <Col xs={6} className="mb-2 text-muted">{usuarioSeleccionado.comuna || 'No especificada'}</Col>
+                
+                {/* Restauramos visualización de estos datos */}
                 <Col xs={6} className="mb-2"><strong>Cumpleaños:</strong></Col>
                 <Col xs={6} className="mb-2 text-muted">{usuarioSeleccionado.fechaNacimiento || 'No registrado'}</Col>
+                
                 <Col xs={6} className="mb-2"><strong>Código Promo:</strong></Col>
                 <Col xs={6} className="mb-2 text-muted">{usuarioSeleccionado.codigoPromo || 'Ninguno'}</Col>
               </Row>
@@ -202,6 +198,7 @@ function AdminUsuarios() {
         <Modal.Footer><Button variant="secondary" onClick={() => setShowModalDetalle(false)}>Cerrar</Button></Modal.Footer>
       </Modal>
 
+      {/* MODAL CONFIRMACIÓN ELIMINAR */}
       <ModalConfirmacion show={showModalEliminar} titulo="Eliminar Usuario" onCancelar={() => setShowModalEliminar(false)} onConfirmar={confirmDelete}>
         <Alert variant="danger" className="text-center mb-0">
           {usuarioAEliminar?.run === user?.run ? (
