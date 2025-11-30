@@ -35,7 +35,8 @@ function Checkout() {
         nombre: `${user.nombre} ${user.apellidos || ''}`.trim(),
         email: user.email,
         region: user.region || '',
-        comuna: user.comuna || ''
+        comuna: user.comuna || '',
+        direccion: user.direccion || ''
       }));
     }
   }, [user]);

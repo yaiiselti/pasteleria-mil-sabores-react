@@ -9,7 +9,7 @@ const authHeader = (): Record<string, string> => {
   return headers;
 };
 
-// Interfaces originales (NO TOCAR PARA NO ROMPER VISTAS)
+// Interfaces adaptadas al Backend
 export interface IProducto {
   codigo: string;
   nombre: string;
@@ -30,14 +30,29 @@ export interface IResena {
   fecha: string;
 }
 
+export interface IUsuario {
+  run: string;
+  nombre: string;
+  apellidos: string;
+  email: string;
+  password?: string;
+  tipo: 'Cliente' | 'Administrador';
+  region?: string;
+  comuna?: string;
+  fechaNacimiento?: string;
+  codigoPromo?: string;
+  pin?: string;
+  direccion?: string; // Hacemos opcional para compatibilidad
+}
+
 export interface IPedido {
-  id: number;
+  id: number; // El backend envía Long, aquí number está bien
   fechaEmision: string;
   horaEmision: string;
   fechaEntrega: string;
-  cliente: any; // any para evitar conflicto con Checkout.tsx
-  subtotal?: number;
-  descuento?: number;
+  cliente: any; 
+  subtotal: number;
+  descuento: number;
   total: number;
   estado: string;
   productos: any[];
@@ -104,7 +119,10 @@ export const getResenasPorProducto = async (codigoProducto: string): Promise<IRe
 export const saveResena = async (nuevaResena: any): Promise<void> => {
   await fetch(`${API_URL}/resenas`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      ...authHeader() // Agregamos auth por seguridad si el backend lo pide
+    },
     body: JSON.stringify(nuevaResena)
   });
 };
@@ -126,13 +144,24 @@ export const getAllPedidos = async (): Promise<IPedido[]> => {
 
 export const savePedido = async (pedido: any): Promise<IPedido | null> => {
   try {
+    // IMPORTANTE: El pedido que viene del carrito tiene ID random.
+    // Lo enviamos tal cual, el Backend debe ignorarlo y generar uno nuevo.
     const res = await fetch(`${API_URL}/pedidos`, {
       method: 'POST',
-      headers: authHeader(),
+      headers: authHeader(), // Requiere token si el usuario está logueado
       body: JSON.stringify(pedido)
     });
-    return res.ok ? await res.json() : null;
-  } catch { return null; }
+    
+    if (res.ok) {
+      return await res.json();
+    } else {
+      console.error("Error backend:", await res.text());
+      return null;
+    }
+  } catch (e) { 
+    console.error(e);
+    return null; 
+  }
 };
 
 export const updateEstadoPedido = async (id: number, nuevoEstado: string): Promise<void> => {
@@ -150,14 +179,42 @@ export const deletePedido = async (id: number): Promise<void> => {
 };
 
 export const updatePedidoProductos = async (idPedido: number, productosActualizados: any[]): Promise<void> => {
-  const pedidos = await getAllPedidos();
-  const pedidoActual = pedidos.find(p => p.id === idPedido);
-  if (pedidoActual) {
-    const pedidoModificado = { ...pedidoActual, productos: productosActualizados };
-    await fetch(`${API_URL}/pedidos/${idPedido}`, {
+  // ESTRATEGIA DIRECTA: No buscamos el pedido de nuevo. 
+  // Construimos un objeto ligero con solo lo necesario para el backend.
+  
+  const payload = {
+    id: idPedido,
+    // Enviamos solo los productos, el backend se encarga de cruzar los datos
+    productos: productosActualizados,
+    // Mantenemos el estado actual para que no se pierda o cambie accidentalmente
+    estado: 'Sin Cambios' // El backend ignorará esto si solo actualizamos productos, o podemos omitirlo
+  };
+
+  try {
+    const res = await fetch(`${API_URL}/pedidos/${idPedido}`, {
       method: 'PUT',
       headers: authHeader(),
-      body: JSON.stringify(pedidoModificado)
+      body: JSON.stringify(payload)
     });
+
+    if (!res.ok) {
+      console.error("Error al guardar en backend:", await res.text());
+    }
+  } catch (e) {
+    console.error("Error de red:", e);
+  }
+};
+
+export const toggleProductoListo = async (pedidoId: number, detalleId: number, listo: boolean): Promise<boolean> => {
+  try {
+    // Usamos el endpoint específico para no re-enviar todo el pedido pesado
+    const res = await fetch(`${API_URL}/pedidos/${pedidoId}/productos/${detalleId}/listo?listo=${listo}`, {
+      method: 'PUT',
+      headers: authHeader()
+    });
+    return res.ok;
+  } catch (error) {
+    console.error("Error al marcar producto:", error);
+    return false;
   }
 };

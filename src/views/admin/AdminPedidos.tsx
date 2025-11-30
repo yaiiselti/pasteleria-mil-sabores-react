@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Table, Form, Alert, Button, Row, Col, Modal, Card, Badge } from 'react-bootstrap';
-// IMPORTAMOS LA NUEVA FUNCIÓN updatePedidoProductos
 import { getAllPedidos, updateEstadoPedido, deletePedido, getProductos, updatePedidoProductos } from '../../services/PasteleriaService';
 import type { IPedido, IProducto } from '../../services/PasteleriaService';
 import ModalConfirmacion from '../../components/ModalConfirmacion';
@@ -23,7 +22,7 @@ function AdminPedidos() {
   const [showModalDetalle, setShowModalDetalle] = useState(false);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<IPedido | null>(null);
 
-  // Estado para marcar items listos visualmente en el modal
+  // Estado para marcar items listos (Usamos IDs de Base de Datos)
   const [itemsListos, setItemsListos] = useState<number[]>([]);
 
   const ESTADOS_PEDIDO = [
@@ -35,12 +34,17 @@ function AdminPedidos() {
   ];
 
   const cargarDatos = async () => {
-    const [dataPedidos, dataProductos] = await Promise.all([
-      getAllPedidos(),
-      getProductos()
-    ]);
-    setPedidos(dataPedidos.reverse());
-    setProductosCatalogo(dataProductos);
+    try {
+      const [dataPedidos, dataProductos] = await Promise.all([
+        getAllPedidos(),
+        getProductos()
+      ]);
+      // Ordenar: Lo más nuevo primero
+      setPedidos(dataPedidos.sort((a, b) => b.id - a.id));
+      setProductosCatalogo(dataProductos);
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+    }
   };
 
   useEffect(() => {
@@ -53,10 +57,14 @@ function AdminPedidos() {
 
   const pedidosFiltrados = pedidos.filter((p) => {
     const texto = filtroTexto.toLowerCase();
+    const nombreCliente = p.cliente?.nombre || '';
+    const emailCliente = p.cliente?.email || '';
+    
     const matchTexto =
       p.id.toString().includes(texto) ||
-      p.cliente.nombre.toLowerCase().includes(texto) ||
-      p.cliente.email.toLowerCase().includes(texto);
+      nombreCliente.toLowerCase().includes(texto) ||
+      emailCliente.toLowerCase().includes(texto);
+      
     const matchEstado = filtroEstado === 'todos' || p.estado === filtroEstado;
     return matchTexto && matchEstado;
   });
@@ -86,44 +94,40 @@ function AdminPedidos() {
     }
   };
 
-  // --- MODIFICADO: AL ABRIR, CARGAR LO QUE YA ESTABA LISTO ---
+  // --- CORRECCIÓN CRÍTICA: USAR .id (BD) ---
   const handleVerDetalle = (pedido: IPedido) => {
     setPedidoSeleccionado(pedido);
 
-    // Extraemos los IDs de los productos que ya tienen la propiedad 'listo' en true
+    // Extraemos los IDs reales de la base de datos
     const listosPrevios = pedido.productos
       .filter((p: any) => p.listo === true)
-      .map((p: any) => p.idUnico);
+      .map((p: any) => p.id); // <--- CAMBIO AQUÍ
 
     setItemsListos(listosPrevios);
     setShowModalDetalle(true);
   };
 
-  // --- NUEVA FUNCIÓN: GUARDAR LOS CAMBIOS DE "LISTO" ---
   const handleGuardarCambiosDetalle = async () => {
     if (!pedidoSeleccionado) return;
 
-    // 1. Creamos una copia actualizada de los productos del pedido
+    // Actualizamos usando el ID real para que el Backend sepa cuál es cuál
     const productosActualizados = pedidoSeleccionado.productos.map((prod: any) => ({
       ...prod,
-      listo: itemsListos.includes(prod.idUnico) // Guardamos true/false según el checklist
+      listo: itemsListos.includes(prod.id) // <--- CAMBIO AQUÍ
     }));
 
-    // 2. Llamamos al servicio para guardar en localStorage
     await updatePedidoProductos(pedidoSeleccionado.id, productosActualizados);
-
-    // 3. Recargamos datos, cerramos modal y mostramos mensaje
     await cargarDatos();
     setShowModalDetalle(false);
     setMensajeExito(`Progreso del pedido #${pedidoSeleccionado.id} guardado correctamente.`);
     setTimeout(() => setMensajeExito(''), 3000);
   };
 
-  const toggleItemListo = (idUnico: number) => {
+  const toggleItemListo = (id: number) => { // Recibe ID real
     setItemsListos(prev =>
-      prev.includes(idUnico)
-        ? prev.filter(id => id !== idUnico)
-        : [...prev, idUnico]
+      prev.includes(id)
+        ? prev.filter(itemId => itemId !== id)
+        : [...prev, id]
     );
   };
 
@@ -139,14 +143,17 @@ function AdminPedidos() {
 
   const verificarDisponibilidad = (codigoProducto: string) => {
     const productoEnCatalogo = productosCatalogo.find(p => p.codigo === codigoProducto);
-    if (!productoEnCatalogo || productoEnCatalogo.activo === false) {
-      return false;
-    }
-    return true;
+    return !(!productoEnCatalogo || productoEnCatalogo.activo === false);
   };
 
-  const getTicketId = (idUnico: number) => {
-    return `TKT-${idUnico.toString().slice(-4)}`;
+  const getCategoriaProducto = (codigo: string) => {
+    const prod = productosCatalogo.find(p => p.codigo === codigo);
+    return prod ? prod.categoria : 'Pastelería';
+  };
+
+  const getTicketId = (id: number) => {
+    if (!id) return 'TKT-????'; 
+    return `TKT-${id.toString().slice(-4).padStart(4, '0')}`;
   };
 
   return (
@@ -208,8 +215,8 @@ function AdminPedidos() {
                   <small className="text-muted">{p.horaEmision}</small>
                 </td>
                 <td>
-                  <div className="fw-bold">{p.cliente.nombre}</div>
-                  <small className="text-muted">{p.cliente.email}</small>
+                  <div className="fw-bold">{p.cliente?.nombre || 'Desconocido'}</div>
+                  <small className="text-muted">{p.cliente?.email}</small>
                 </td>
                 <td className="fw-bold text-success">${p.total.toLocaleString('es-CL')}</td>
                 <td style={{ minWidth: '180px' }}>
@@ -292,9 +299,9 @@ function AdminPedidos() {
                   <Card className="mb-3 border-0 shadow-sm bg-light">
                     <Card.Body>
                       <h6 className="fw-bold text-secondary mb-3">Cliente</h6>
-                      <p className="mb-1"><i className="fa-regular fa-user me-2 text-muted"></i>{pedidoSeleccionado.cliente.nombre}</p>
-                      <p className="mb-1"><i className="fa-regular fa-envelope me-2 text-muted"></i>{pedidoSeleccionado.cliente.email}</p>
-                      <p className="mb-1"><i className="fa-solid fa-location-dot me-2 text-muted"></i>{pedidoSeleccionado.cliente.direccion}, {pedidoSeleccionado.cliente.comuna}</p>
+                      <p className="mb-1"><i className="fa-regular fa-user me-2 text-muted"></i>{pedidoSeleccionado.cliente?.nombre}</p>
+                      <p className="mb-1"><i className="fa-regular fa-envelope me-2 text-muted"></i>{pedidoSeleccionado.cliente?.email}</p>
+                      <p className="mb-1"><i className="fa-solid fa-location-dot me-2 text-muted"></i>{pedidoSeleccionado.cliente?.direccion}, {pedidoSeleccionado.cliente?.comuna}</p>
                     </Card.Body>
                   </Card>
 
@@ -327,12 +334,13 @@ function AdminPedidos() {
                 <div className="d-grid gap-3" style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '5px' }}>
                   {pedidoSeleccionado.productos.map((prod: any) => {
                     const disponible = verificarDisponibilidad(prod.codigo);
-                    const isReady = itemsListos.includes(prod.idUnico);
-                    const ticketId = getTicketId(prod.idUnico);
+                    const isReady = itemsListos.includes(prod.id); // <--- CAMBIO AQUÍ
+                    const ticketId = getTicketId(prod.id);         // <--- CAMBIO AQUÍ
+                    const categoria = getCategoriaProducto(prod.codigo);
 
                     return (
                       <Card
-                        key={prod.idUnico}
+                        key={prod.id} // <--- CAMBIO CRÍTICO: KEY ÚNICA DE BD
                         className={`border-0 shadow-sm transition-all ${isReady ? 'bg-success bg-opacity-10' : 'bg-white'}`}
                         style={{
                           borderLeft: `5px solid ${isReady ? '#198754' : '#0d6efd'}`,
@@ -355,7 +363,7 @@ function AdminPedidos() {
                               </h5>
 
                               <div className="d-flex align-items-center gap-3 text-muted small">
-                                <span><i className="fa-solid fa-tag me-1"></i> {prod.categoria}</span>
+                                <span><i className="fa-solid fa-tag me-1"></i> {categoria}</span>
                                 <span><i className="fa-solid fa-dollar-sign me-1"></i> {prod.precio.toLocaleString('es-CL')} c/u</span>
                               </div>
 
@@ -384,9 +392,9 @@ function AdminPedidos() {
                               <div className="mt-3 w-100 text-end">
                                 <Form.Check
                                   type="checkbox"
-                                  id={`check-${prod.idUnico}`}
+                                  id={`check-${prod.id}`} // <--- ID ÚNICO REAL
                                   checked={isReady}
-                                  onChange={() => toggleItemListo(prod.idUnico)}
+                                  onChange={() => toggleItemListo(prod.id)} // <--- ID ÚNICO REAL
                                   label={isReady ? "LISTO" : "PENDIENTE"}
                                   className={`fw-bold user-select-none ${isReady ? 'text-success' : 'text-secondary'}`}
                                   style={{ cursor: 'pointer' }}
@@ -430,7 +438,6 @@ function AdminPedidos() {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowModalDetalle(false)}>Cerrar</Button>
-          {/* BOTÓN CONECTADO A LA NUEVA FUNCIÓN */}
           <Button variant="primary" onClick={handleGuardarCambiosDetalle}>
             <i className="fa-solid fa-save me-2"></i> Guardar Cambios
           </Button>

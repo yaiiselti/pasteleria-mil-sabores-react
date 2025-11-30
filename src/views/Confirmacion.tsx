@@ -1,40 +1,87 @@
-import { useEffect, useState } from 'react';
-import { Container, Card, Row, Col, Table, Button } from 'react-bootstrap';
+import { useEffect, useState, useRef } from 'react'; // Importamos useRef
+import { Container, Card, Row, Col, Table, Button, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import { savePedido } from '../services/PasteleriaService';
+import { useAuth } from '../context/AuthContext';
 
 function Confirmacion() {
   const [orden, setOrden] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
+  const [errorSync, setErrorSync] = useState('');
+  const { user } = useAuth();
+
+  // SEMÁFORO: Evita la doble ejecución en modo Desarrollo (Strict Mode)
+  // useRef mantiene su valor entre renderizados sin provocar nuevos renders
+  const envioIniciado = useRef(false);
 
   useEffect(() => {
-    const ordenGuardada = localStorage.getItem('ultimaOrden');
-    if (ordenGuardada) {
-      try {
-        setOrden(JSON.parse(ordenGuardada));
-      } catch (e) {
-        console.error("Error:", e);
+    const procesarOrden = async () => {
+      const ordenGuardadaStr = localStorage.getItem('ultimaOrden');
+      
+      if (ordenGuardadaStr) {
+        try {
+          const ordenLocal = JSON.parse(ordenGuardadaStr);
+
+          // Lógica de Sincronización Blindada
+          if (!ordenLocal.synced) {
+            
+            // 1. SI YA SE ESTÁ ENVIANDO, DETENEMOS ESTA EJECUCIÓN
+            if (envioIniciado.current) return;
+            
+            // 2. MARCAMOS EL SEMÁFORO EN ROJO (Ocupado)
+            envioIniciado.current = true;
+
+            // Llamamos al Backend
+            const ordenGuardadaDB = await savePedido(ordenLocal);
+
+            if (ordenGuardadaDB) {
+              // ÉXITO: Marcamos como sincronizada
+              const ordenFinal = { ...ordenGuardadaDB, synced: true };
+              setOrden(ordenFinal);
+              localStorage.setItem('ultimaOrden', JSON.stringify(ordenFinal));
+            } else {
+              // ERROR: Liberamos el semáforo por si el usuario recarga
+              envioIniciado.current = false; 
+              console.warn("Fallo al guardar en BD.");
+              setErrorSync("Hubo un problema de conexión al guardar tu pedido. Por favor guarda este comprobante.");
+              setOrden(ordenLocal);
+            }
+
+          } else {
+            // Ya estaba guardada, solo mostramos
+            setOrden(ordenLocal);
+          }
+
+        } catch (e) {
+          console.error("Error al procesar orden:", e);
+        }
       }
-    }
-    setCargando(false);
+      setCargando(false);
+    };
+
+    procesarOrden();
   }, []);
 
   const handlePrint = () => {
     window.print();
   };
 
-  if (cargando) return <div className="text-center py-5">Procesando pedido...</div>;
+  if (cargando) return <div className="text-center py-5"><div className="spinner-border text-primary" role="status"></div><p className="mt-2">Procesando y guardando tu pedido...</p></div>;
 
   if (!orden) {
     return (
       <Container className="py-5 text-center">
         <h3>No hay información de orden reciente.</h3>
-        <Link to="/" className="btn btn-principal mt-3">Volver al Inicio</Link>
+        <Link to="/tienda" className="btn btn-principal mt-3">Volver a la Tienda</Link>
       </Container>
     );
   }
 
   return (
     <Container className="py-5">
+      
+      {errorSync && <Alert variant="warning"><i className="fa-solid fa-triangle-exclamation me-2"></i>{errorSync}</Alert>}
+
       <Card className="shadow border-0 p-4" id="boleta-content">
         <Card.Body>
           
@@ -45,7 +92,9 @@ function Confirmacion() {
             <p className="text-muted mb-3">RUT: 77.123.456-7</p>
             
             <div className="d-inline-block border px-4 py-2 bg-light rounded">
-              <h4 className="mb-0">Boleta Electrónica Nº {orden.id}</h4>
+              <h4 className="mb-0">
+                 Boleta Electrónica Nº {orden.id}
+              </h4>
             </div>
           </div>
 
@@ -77,9 +126,12 @@ function Confirmacion() {
                 </tr>
               </thead>
               <tbody>
-                {orden.productos.map((prod: any) => (
-                  <tr key={prod.idUnico}>
-                    <td>{prod.nombre} {prod.mensaje && <span className="small text-muted">({prod.mensaje})</span>}</td>
+                {orden.productos.map((prod: any, idx: number) => (
+                  <tr key={idx}>
+                    <td>
+                        {prod.nombre} 
+                        {prod.mensaje && <div className="small text-muted fst-italic">"{prod.mensaje}"</div>}
+                    </td>
                     <td className="text-center">{prod.cantidad}</td>
                     <td className="text-end">${prod.precio.toLocaleString('es-CL')}</td>
                     <td className="text-end">${(prod.precio * prod.cantidad).toLocaleString('es-CL')}</td>
@@ -96,17 +148,17 @@ function Confirmacion() {
                 <tbody>
                   <tr>
                     <td className="text-end">Subtotal:</td>
-                    <td className="text-end">${orden.subtotal.toLocaleString('es-CL')}</td>
+                    <td className="text-end">${orden.subtotal?.toLocaleString('es-CL')}</td>
                   </tr>
                   {orden.descuento > 0 && (
                     <tr className="text-success">
                       <td className="text-end">Descuento:</td>
-                      <td className="text-end">-${orden.descuento.toLocaleString('es-CL')}</td>
+                      <td className="text-end">-${orden.descuento?.toLocaleString('es-CL')}</td>
                     </tr>
                   )}
                   <tr className="border-top fs-5 fw-bold">
                     <td className="text-end">Total a Pagar:</td>
-                    <td className="text-end">${orden.total.toLocaleString('es-CL')}</td>
+                    <td className="text-end">${orden.total?.toLocaleString('es-CL')}</td>
                   </tr>
                 </tbody>
               </Table>
@@ -131,7 +183,6 @@ function Confirmacion() {
         </Card.Body>
       </Card>
 
-      {/* Estilo para ocultar botones al imprimir */}
       <style>{`
         @media print {
           .no-print, .main-header, .main-footer { display: none !important; }

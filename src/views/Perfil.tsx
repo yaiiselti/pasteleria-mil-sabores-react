@@ -3,47 +3,62 @@ import { Container, Card, Row, Col, Badge, Table, Button, Modal, Form, Alert, Li
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
-import { getUsuarios, saveUsuario } from '../services/AdminService';
+import { getUsuarioByRun, saveUsuario } from '../services/AdminService';
 import type { IUsuario } from '../services/AdminService';
 import { updateEstadoPedido, getAllPedidos } from '../services/PasteleriaService';
 import ModalConfirmacion from '../components/ModalConfirmacion';
+import { REGIONES_CHILE } from '../Data/regiones';
 
 function Perfil() {
   const { user, logout, updateUserSession } = useAuth();
   const { showNotification } = useNotification();
 
-  // Estados para Pedidos
   const [misPedidos, setMisPedidos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // Estados para Modales
   const [showModalEditar, setShowModalEditar] = useState(false);
   const [showModalDetalle, setShowModalDetalle] = useState(false);
   const [showModalCancelar, setShowModalCancelar] = useState(false);
 
-  // Estado para ver contraseña
   const [mostrarPassword, setMostrarPassword] = useState(false);
-
-  // Datos seleccionados
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<any>(null);
   
-  // Formulario Edición
   const [datosEditables, setDatosEditables] = useState({
-    nombre: '', apellidos: '', email: '', run: '', password: ''
+    nombre: '', 
+    apellidos: '', 
+    email: '', 
+    run: '', 
+    password: '', 
+    confirmPassword: '',
+    region: '',
+    comuna: '',
+    direccion: ''
   });
 
-  // --- 1. CARGA DE PEDIDOS ---
   const cargarMisPedidos = async () => {
     if (!user) return;
-    const todosLosPedidos = await getAllPedidos();
-    const mios = todosLosPedidos.filter(p => p.cliente.email.toLowerCase() === user.email.toLowerCase());
-    setMisPedidos(mios.reverse()); 
+    try {
+      const todosLosPedidos = await getAllPedidos();
+      const mios = todosLosPedidos.filter((p: any) => 
+        p.cliente?.email?.toLowerCase() === user.email.toLowerCase()
+      );
+      mios.sort((a, b) => a.id - b.id);
+      const miosNumerados = mios.map((pedido, index) => ({
+        ...pedido,
+        numeroPersonal: index + 1
+      }));
+      setMisPedidos(miosNumerados.reverse());
+    } catch (error) {
+      console.error("Error cargando historial", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     cargarMisPedidos();
   }, [user]);
 
-  // --- LÓGICA DE BENEFICIOS ---
   const calcularEdad = (fecha?: string) => {
     if (!fecha) return 0;
     const hoy = new Date();
@@ -57,43 +72,62 @@ function Perfil() {
   const tieneDescuentoCodigo = user?.codigoPromo === 'FELICES50';
   const sinBeneficios = !tieneDescuentoEdad && !tieneDescuentoCodigo;
 
-  // --- MANEJADORES DE EDICIÓN DE PERFIL ---
   const handleOpenEditModal = async () => {
     if (user) {
-      const usuariosDB = await getUsuarios();
-      const usuarioReal = usuariosDB.find(u => u.run === user.run);
-      
+      const usuarioReal = await getUsuarioByRun(user.run);
       if (usuarioReal) {
         setDatosEditables({
           nombre: usuarioReal.nombre,
           apellidos: usuarioReal.apellidos,
           email: usuarioReal.email,
           run: usuarioReal.run,
-          password: usuarioReal.password || '' 
+          region: usuarioReal.region || '',
+          comuna: usuarioReal.comuna || '',
+          direccion: usuarioReal.direccion || '', // Ahora esto no dará error gracias a AuthContext y AdminService
+          password: '',        
+          confirmPassword: ''
         });
-        setMostrarPassword(false); // Resetear visor
+        setMostrarPassword(false);
         setShowModalEditar(true);
       }
     }
   };
 
-  const handleGuardarPerfil = async () => {
-    // Validación de Duplicados
-    const usuariosDB = await getUsuarios();
-    const emailOcupado = usuariosDB.some(u => 
-      u.email.toLowerCase() === datosEditables.email.toLowerCase().trim() && 
-      u.run !== user?.run 
-    );
+  // --- CORRECCIÓN DEL ONCHANGE ---
+  // Usamos 'any' en el evento para evitar conflictos de tipos entre Input y Select
+  const handleChange = (e: React.ChangeEvent<any>) => {
+    const { name, value } = e.target;
+    setDatosEditables(prev => {
+        if (name === 'region') return { ...prev, region: value, comuna: '' };
+        return { ...prev, [name]: value };
+    });
+  };
 
-    if (emailOcupado) {
-      showNotification('Error: Ese correo ya está en uso por otro usuario.', 'danger');
-      return;
+  const handleGuardarPerfil = async () => {
+    if (!datosEditables.nombre.trim() || !datosEditables.apellidos.trim()) {
+        showNotification('Nombre y Apellidos son obligatorios.', 'warning'); return;
+    }
+
+    if (datosEditables.password || datosEditables.confirmPassword) {
+        if (datosEditables.password !== datosEditables.confirmPassword) {
+            showNotification('Las contraseñas no coinciden.', 'warning'); return;
+        }
+        if (datosEditables.password.length < 4) {
+            showNotification('La contraseña es muy corta (mínimo 4).', 'warning'); return;
+        }
     }
 
     try {
       const usuarioActualizado: IUsuario = {
-        ...datosEditables,
-        tipo: user?.rol === 'Administrador' ? 'Administrador' : 'Cliente',
+        run: datosEditables.run,
+        nombre: datosEditables.nombre,
+        apellidos: datosEditables.apellidos,
+        email: datosEditables.email,
+        region: datosEditables.region,
+        comuna: datosEditables.comuna,
+        direccion: datosEditables.direccion,
+        password: datosEditables.password,
+        tipo: 'Cliente', 
         fechaNacimiento: user?.fechaNacimiento,
         codigoPromo: user?.codigoPromo
       };
@@ -103,7 +137,10 @@ function Perfil() {
       updateUserSession({ 
         nombre: datosEditables.nombre,
         apellidos: datosEditables.apellidos,
-        email: datosEditables.email
+        email: datosEditables.email,
+        region: datosEditables.region,
+        comuna: datosEditables.comuna,
+        direccion: datosEditables.direccion
       });
 
       showNotification('Perfil actualizado correctamente', 'success');
@@ -113,7 +150,6 @@ function Perfil() {
     }
   };
 
-  // --- MANEJADORES DE PEDIDOS ---
   const handleVerDetalle = (pedido: any) => {
     setPedidoSeleccionado(pedido);
     setShowModalDetalle(true);
@@ -145,6 +181,8 @@ function Perfil() {
     }
   };
 
+  const comunasDisponibles = REGIONES_CHILE.find(r => r.region === datosEditables.region)?.comunas || [];
+
   if (!user) {
     return (
       <Container className="py-5 text-center">
@@ -157,18 +195,24 @@ function Perfil() {
   return (
     <Container className="py-5">
       <Row className="g-4">
-        
-        {/* COLUMNA IZQUIERDA: TARJETA DE USUARIO */}
         <Col lg={4}>
           <Card className="shadow-sm border-0 mb-4 text-center">
             <Card.Body className="p-4">
               <div className="mb-3 position-relative d-inline-block">
-                <i className="fa-solid fa-circle-user fa-6x text-secondary"></i>
-                <div className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle p-1"></div>
+                <div className="bg-light rounded-circle p-3">
+                    <i className="fa-solid fa-user fa-4x text-secondary"></i>
+                </div>
+                <div className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle p-2"></div>
               </div>
               <h4 className="fw-bold mb-0">{user.nombre} {user.apellidos}</h4>
-              <p className="text-muted mb-1">{user.email}</p>
-              <Badge bg="light" text="dark" className="border mb-3">{user.run}</Badge>
+              <p className="text-muted mb-2">{user.email}</p>
+              
+              <div className="text-start border-top pt-3 small">
+                 <p className="mb-1"><strong>RUN:</strong> {user.run}</p>
+                 <p className="mb-1"><strong>Región:</strong> {user.region || '---'}</p>
+                 <p className="mb-1"><strong>Comuna:</strong> {user.comuna || '---'}</p>
+                 <p className="mb-3"><strong>Dirección:</strong> {user.direccion || '---'}</p>
+              </div>
               
               <div className="d-grid gap-2">
                 <Button variant="outline-primary" onClick={handleOpenEditModal}>
@@ -198,7 +242,6 @@ function Perfil() {
           </Card>
         </Col>
 
-        {/* COLUMNA DERECHA: LISTA DE PEDIDOS */}
         <Col lg={8}>
           <Card className="shadow-sm border-0 h-100">
             <Card.Header className="bg-white py-3 d-flex justify-content-between align-items-center">
@@ -206,7 +249,9 @@ function Perfil() {
                 <Badge bg="primary" pill>{misPedidos.length}</Badge>
             </Card.Header>
             <Card.Body className="p-0">
-              {misPedidos.length === 0 ? (
+              {loading ? (
+                 <div className="text-center py-5">Cargando...</div>
+              ) : misPedidos.length === 0 ? (
                 <div className="text-center py-5 text-muted">
                   <i className="fa-solid fa-basket-shopping fa-3x mb-3 text-secondary opacity-50"></i>
                   <p>Aún no has realizado pedidos.</p>
@@ -227,19 +272,20 @@ function Perfil() {
                     <tbody>
                       {misPedidos.map((pedido: any) => (
                         <tr key={pedido.id}>
-                          <td className="ps-4 fw-bold text-primary">#{pedido.id}</td>
+                          <td className="ps-4 fw-bold text-primary">
+                             #{pedido.numeroPersonal} 
+                          </td>
                           <td>
                             <div className="small">{pedido.fechaEmision}</div>
                             <small className="text-muted" style={{fontSize: '0.75rem'}}>{pedido.horaEmision}</small>
                           </td>
-                          <td className="fw-bold">${pedido.total.toLocaleString('es-CL')}</td>
+                          <td className="fw-bold">${pedido.total?.toLocaleString('es-CL')}</td>
                           <td>
                             <Badge bg={getBadgeVariant(pedido.estado || 'Pendiente')}>
                               {pedido.estado || 'Pendiente'}
                             </Badge>
                           </td>
                           <td className="text-end pe-4">
-                            {/* BOTÓN GRANDE ESTILO ADMIN */}
                             <Button 
                                 variant="outline-primary" 
                                 size="sm" 
@@ -247,7 +293,7 @@ function Perfil() {
                                 onClick={() => handleVerDetalle(pedido)}
                                 title="Ver detalle completo"
                             >
-                                <i className="fa-solid fa-eye me-2"></i> Ver Detalle
+                                <i className="fa-solid fa-eye me-2"></i> Ver
                             </Button>
                           </td>
                         </tr>
@@ -261,8 +307,7 @@ function Perfil() {
         </Col>
       </Row>
 
-      {/* --- MODAL 1: EDITAR PERFIL --- */}
-      <Modal show={showModalEditar} onHide={() => setShowModalEditar(false)} centered backdrop="static">
+      <Modal show={showModalEditar} onHide={() => setShowModalEditar(false)} centered backdrop="static" size="lg">
         <Modal.Header closeButton>
             <Modal.Title className="logo-text text-primary">Editar Mis Datos</Modal.Title>
         </Modal.Header>
@@ -272,42 +317,77 @@ function Perfil() {
                 <Col md={6}>
                     <Form.Group>
                         <Form.Label>Nombre</Form.Label>
-                        <Form.Control type="text" value={datosEditables.nombre} onChange={(e) => setDatosEditables({...datosEditables, nombre: e.target.value})} />
+                        <Form.Control type="text" name="nombre" value={datosEditables.nombre} onChange={handleChange} />
                     </Form.Group>
                 </Col>
                 <Col md={6}>
                     <Form.Group>
                         <Form.Label>Apellidos</Form.Label>
-                        <Form.Control type="text" value={datosEditables.apellidos} onChange={(e) => setDatosEditables({...datosEditables, apellidos: e.target.value})} />
-                    </Form.Group>
-                </Col>
-                <Col md={12}>
-                    <Form.Group>
-                        <Form.Label>Email</Form.Label>
-                        <Form.Control type="email" value={datosEditables.email} onChange={(e) => setDatosEditables({...datosEditables, email: e.target.value})} />
+                        <Form.Control type="text" name="apellidos" value={datosEditables.apellidos} onChange={handleChange} />
                     </Form.Group>
                 </Col>
                 
-                {/* INPUT DE CONTRASEÑA CON VISOR (OJITO) */}
-                <Col md={12}>
+                <Col md={6}>
                     <Form.Group>
-                        <Form.Label>Contraseña</Form.Label>
+                        <Form.Label>Email</Form.Label>
+                        <Form.Control type="email" name="email" value={datosEditables.email} onChange={handleChange} />
+                    </Form.Group>
+                </Col>
+                <Col md={6}>
+                    <Form.Group>
+                        <Form.Label>Dirección</Form.Label>
+                        <Form.Control type="text" name="direccion" value={datosEditables.direccion} onChange={handleChange} placeholder="Calle y N°" />
+                    </Form.Group>
+                </Col>
+
+                <Col md={6}>
+                    <Form.Group>
+                        <Form.Label>Región</Form.Label>
+                        <Form.Select name="region" value={datosEditables.region} onChange={handleChange}>
+                            <option value="">Seleccione...</option>
+                            {REGIONES_CHILE.map(r => <option key={r.region} value={r.region}>{r.region}</option>)}
+                        </Form.Select>
+                    </Form.Group>
+                </Col>
+                <Col md={6}>
+                    <Form.Group>
+                        <Form.Label>Comuna</Form.Label>
+                        <Form.Select name="comuna" value={datosEditables.comuna} onChange={handleChange} disabled={!datosEditables.region}>
+                            <option value="">Seleccione...</option>
+                            {comunasDisponibles.map(c => <option key={c} value={c}>{c}</option>)}
+                        </Form.Select>
+                    </Form.Group>
+                </Col>
+                
+                <Col md={12}><hr /></Col>
+
+                <Col md={6}>
+                    <Form.Group>
+                        <Form.Label>Nueva Contraseña</Form.Label>
                         <InputGroup>
                             <Form.Control 
                                 type={mostrarPassword ? "text" : "password"} 
-                                placeholder="(Sin cambios)" 
+                                placeholder="(Dejar en blanco para no cambiar)" 
+                                name="password"
                                 value={datosEditables.password} 
-                                onChange={(e) => setDatosEditables({...datosEditables, password: e.target.value})} 
+                                onChange={handleChange} 
                             />
-                            <Button 
-                                variant="outline-secondary" 
-                                onClick={() => setMostrarPassword(!mostrarPassword)}
-                                title={mostrarPassword ? "Ocultar" : "Mostrar"}
-                            >
+                            <Button variant="outline-secondary" onClick={() => setMostrarPassword(!mostrarPassword)}>
                                 <i className={mostrarPassword ? "fa-solid fa-eye-slash" : "fa-solid fa-eye"}></i>
                             </Button>
                         </InputGroup>
-                        <Form.Text className="text-muted">Deja en blanco para mantener la actual.</Form.Text>
+                    </Form.Group>
+                </Col>
+                <Col md={6}>
+                    <Form.Group>
+                        <Form.Label>Confirmar Nueva Contraseña</Form.Label>
+                        <Form.Control 
+                            type="password" 
+                            name="confirmPassword"
+                            placeholder="Repetir clave nueva" 
+                            value={datosEditables.confirmPassword} 
+                            onChange={handleChange} 
+                        />
                     </Form.Group>
                 </Col>
             </Row>
@@ -319,11 +399,10 @@ function Perfil() {
         </Modal.Footer>
       </Modal>
 
-      {/* --- MODAL 2: DETALLE DEL PEDIDO --- */}
       <Modal show={showModalDetalle} onHide={() => setShowModalDetalle(false)} size="lg" centered>
         <Modal.Header closeButton className="bg-light">
           <Modal.Title className="logo-text text-secondary">
-             Detalle de Compra #{pedidoSeleccionado?.id}
+             Detalle de Compra #{pedidoSeleccionado?.numeroPersonal}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className="p-4">
@@ -360,7 +439,6 @@ function Perfil() {
                     ))}
                 </ListGroup>
 
-                {/* --- SECCIÓN DE TOTALES ACTUALIZADA CON DESCUENTO --- */}
                 <div className="border-top pt-3 mt-3">
                     {(pedidoSeleccionado.descuento && pedidoSeleccionado.descuento > 0) ? (
                         <>
@@ -384,7 +462,6 @@ function Perfil() {
                         </div>
                     )}
                 </div>
-                {/* --------------------------------------------------- */}
 
                 {pedidoSeleccionado.estado === 'Pendiente' && (
                     <Alert variant="light" className="mt-4 border d-flex justify-content-between align-items-center">
@@ -405,7 +482,6 @@ function Perfil() {
         </Modal.Footer>
       </Modal>
 
-      {/* --- MODAL 3: CONFIRMACIÓN --- */}
       <ModalConfirmacion
         show={showModalCancelar}
         titulo="Cancelar Pedido"
@@ -414,7 +490,7 @@ function Perfil() {
       >
         <div className="text-center">
           <i className="fa-solid fa-triangle-exclamation fa-3x text-warning mb-3"></i>
-          <p>¿Estás seguro de que deseas cancelar el pedido <strong>#{pedidoSeleccionado?.id}</strong>?</p>
+          <p>¿Estás seguro de que deseas cancelar el pedido <strong>#{pedidoSeleccionado?.numeroPersonal}</strong>?</p>
           <small className="text-muted">Esta acción no se puede deshacer.</small>
         </div>
       </ModalConfirmacion>

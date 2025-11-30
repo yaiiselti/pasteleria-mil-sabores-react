@@ -186,7 +186,7 @@ function AdminUsuarios() {
                 <Col xs={6} className="mb-2 text-muted">{usuarioSeleccionado.comuna || 'No especificada'}</Col>
                 
                 {/* Restauramos visualización de estos datos */}
-                <Col xs={6} className="mb-2"><strong>Cumpleaños:</strong></Col>
+                <Col xs={6} className="mb-2"><strong>fecha Nacimiento:</strong></Col>
                 <Col xs={6} className="mb-2 text-muted">{usuarioSeleccionado.fechaNacimiento || 'No registrado'}</Col>
                 
                 <Col xs={6} className="mb-2"><strong>Código Promo:</strong></Col>

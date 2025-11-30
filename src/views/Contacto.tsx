@@ -1,22 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Form, Button, Row, Col, Card, Spinner } from 'react-bootstrap';
 import { useNotification } from '../context/NotificationContext';
-// Importamos el servicio para guardar de verdad
+// Importamos el hook de autenticación para obtener los datos del usuario
+import { useAuth } from '../context/AuthContext';
 import { saveMensaje } from '../services/ContactoService';
 
 function Contacto() {
   const { showNotification } = useNotification();
+  const { user } = useAuth(); // <--- ACCESO AL USUARIO LOGUEADO
 
-  // 1. Estado del Formulario (Incluye confirmEmail)
+  // 1. Estado del Formulario
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
-    confirmEmail: '', // Campo de validación local
+    confirmEmail: '', 
     comentario: ''
   });
 
-  // 2. Estado de Carga
   const [enviando, setEnviando] = useState(false);
+
+  // --- EFECTO MAGICO: AUTO-RELLENAR ---
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        // Unimos nombre y apellido para el campo "Nombre Completo"
+        nombre: `${user.nombre} ${user.apellidos}`.trim(),
+        email: user.email,
+        confirmEmail: user.email // Auto-confirmamos para ahorrarle tiempo
+      }));
+    }
+  }, [user]); // Se ejecuta cuando carga el usuario
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -26,53 +40,54 @@ function Contacto() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // --- VALIDACIONES ---
-    
-    // 1. Campos vacíos
+    // 1. Validaciones
     if (!formData.nombre.trim() || !formData.email.trim() || !formData.confirmEmail.trim() || !formData.comentario.trim()) {
       showNotification('Por favor completa todos los campos.', 'warning');
       return;
     }
 
-    // 2. Formato de Email
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
     if (!emailRegex.test(formData.email)) {
       showNotification('El formato del correo no es válido.', 'warning');
       return;
     }
 
-    // 3. Coincidencia de Correos (La validación "Seria")
     if (formData.email.toLowerCase() !== formData.confirmEmail.toLowerCase()) {
         showNotification('❌ Los correos electrónicos no coinciden.', 'danger');
         return;
     }
 
-    // --- ENVÍO AL SERVICIO ---
-    setEnviando(true); // Bloqueamos botón
+    setEnviando(true);
 
     try {
-        // Guardamos usando el servicio (excluyendo confirmEmail que no sirve en la BD)
         await saveMensaje({
             nombre: formData.nombre,
             email: formData.email,
             comentario: formData.comentario
         });
 
-        // Éxito
         showNotification('¡Mensaje recibido! Nos pondremos en contacto contigo.', 'success');
-        setFormData({ nombre: '', email: '', confirmEmail: '', comentario: '' }); // Limpiar formulario
+        
+        // UX MEJORADA:
+        // Si el usuario está logueado, mantenemos sus datos y solo borramos el mensaje.
+        // Si es un visitante, limpiamos todo el formulario.
+        if (user) {
+            setFormData(prev => ({ ...prev, comentario: '' }));
+        } else {
+            setFormData({ nombre: '', email: '', confirmEmail: '', comentario: '' });
+        }
 
     } catch (error) {
         showNotification('Error al enviar el mensaje. Intenta nuevamente.', 'danger');
     } finally {
-        setEnviando(false); // Desbloqueamos botón
+        setEnviando(false);
     }
   };
 
   return (
     <Container className="py-5">
       
-      {/* --- SECCIÓN MAPA E INFORMACIÓN (MANTENIDA COMO ESTABA) --- */}
+      {/* --- SECCIÓN MAPA E INFORMACIÓN --- */}
       <div className="content-container mb-5">
         <h2 className="text-center logo-text mb-4">Nuestra Ubicación</h2>
         <div className="map-container mb-4 shadow-sm border">
@@ -105,13 +120,15 @@ function Contacto() {
         </div>
       </div>
 
-      {/* --- FORMULARIO PROFESIONAL --- */}
+      {/* --- FORMULARIO CON AUTO-FILL --- */}
       <Row className="justify-content-center">
         <Col md={8} lg={6}>
           <Card className="shadow border-0">
             <Card.Body className="p-5">
               <h2 className="text-center logo-text mb-2">Contáctanos</h2>
-              <p className="text-center text-muted mb-4">Déjanos tus datos correctamente para poder responderte.</p>
+              <p className="text-center text-muted mb-4">
+                  {user ? `Hola ${user.nombre}, envíanos tus comentarios.` : "Déjanos tus datos correctamente para poder responderte."}
+              </p>
               
               <Form onSubmit={handleSubmit} autoComplete="off">
                 <Form.Group className="mb-3" controlId="nombre">
@@ -125,7 +142,6 @@ function Contacto() {
                   />
                 </Form.Group>
 
-                {/* Fila de Correos con Doble Validación */}
                 <Row>
                     <Col md={12}>
                         <Form.Group className="mb-3" controlId="email">
@@ -149,18 +165,17 @@ function Contacto() {
                             value={formData.confirmEmail}
                             onChange={handleChange}
                             disabled={enviando}
-                            // BLOQUEO DE PEGAR (Seguridad)
                             onPaste={(e) => {
                                 e.preventDefault();
                                 showNotification('Por seguridad, escribe el correo manualmente.', 'info');
                             }}
                             className={
-                                formData.confirmEmail && formData.email !== formData.confirmEmail 
+                                formData.confirmEmail && formData.email.toLowerCase() !== formData.confirmEmail.toLowerCase()
                                 ? "border-danger" 
                                 : ""
                             }
                         />
-                        {formData.confirmEmail && formData.email !== formData.confirmEmail && (
+                        {formData.confirmEmail && formData.email.toLowerCase() !== formData.confirmEmail.toLowerCase() && (
                             <Form.Text className="text-danger small">Los correos no coinciden.</Form.Text>
                         )}
                         </Form.Group>
@@ -176,7 +191,11 @@ function Contacto() {
                     value={formData.comentario}
                     onChange={handleChange}
                     disabled={enviando}
+                    maxLength={250}
                   />
+                  <Form.Text className="text-muted text-end d-block">
+                      {formData.comentario.length}/250 caracteres
+                    </Form.Text>
                 </Form.Group>
                 
                 <Button 
