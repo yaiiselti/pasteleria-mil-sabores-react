@@ -1,4 +1,4 @@
-import { createContext, useState, useContext } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react'; // <--- IMPORTANTE: useEffect
 import type { ReactNode } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8085/api';
@@ -142,6 +142,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Limpiamos beneficios al salir para seguridad
     localStorage.removeItem('descuentoEdad');
     localStorage.removeItem('descuentoCodigo');
+    
+    // Forzamos redirección visual por si acaso
+    window.location.href = '/login';
   };
 
   const updateUserSession = (newData: Partial<UserSession>) => {
@@ -153,6 +156,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       activarBeneficios(updated);
     }
   };
+
+  // --- NUEVO: MONITOR DE SESIÓN (Anti-Zombie) ---
+  useEffect(() => {
+    const verificarSesion = async () => {
+      if (!user) return;
+
+      try {
+        // Intentamos consultar algo que requiera auth (como los datos del propio usuario)
+        // Si el usuario fue borrado, esto fallará con 404 o 401
+        const res = await fetch(`${API_URL}/usuarios/${user.run}`, {
+            method: 'GET',
+            headers: { 
+                'Authorization': `Bearer ${user.token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (res.status === 401 || res.status === 403 || res.status === 404) {
+            console.warn("⚠️ Sesión invalidada. Cerrando...");
+            logout();
+        }
+      } catch (error) {
+        console.error("Error verificando sesión", error);
+      }
+    };
+
+    // Verificamos al cargar y al volver a la pestaña
+    window.addEventListener('focus', verificarSesion);
+    verificarSesion(); // Check inicial
+
+    return () => {
+      window.removeEventListener('focus', verificarSesion);
+    };
+  }, [user]); // Dependencia: usuario actual
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, registro, updateUserSession }}>

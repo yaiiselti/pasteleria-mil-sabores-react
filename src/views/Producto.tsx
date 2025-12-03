@@ -27,11 +27,32 @@ function Producto() {
   const [error, setError] = useState<string | null>(null);
   
   const [imagenPrincipal, setImagenPrincipal] = useState('');
-  const [cantidad, setCantidad] = useState(1);
   const [mensaje, setMensaje] = useState('');
+  const [cantidad, setCantidad] = useState(1);
+  const MAX_CANTIDAD = 20; // Límite de seguridad
 
   const [nuevoComentario, setNuevoComentario] = useState('');
   const [nuevaCalificacion, setNuevaCalificacion] = useState(5);
+
+  const handleCantidadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let valor = parseInt(e.target.value);
+
+    // 1. Si borra todo (NaN), lo dejamos temporalmente vacío o en 1
+    if (isNaN(valor)) {
+        setCantidad(1); 
+        return;
+    }
+
+    // 2. Aplicamos límites (Clamp)
+    if (valor < 1) valor = 1;
+    if (valor > MAX_CANTIDAD) {
+        valor = MAX_CANTIDAD;
+        showNotification(`El máximo permitido es ${MAX_CANTIDAD} unidades.`, 'warning');
+    }
+
+    setCantidad(valor);
+  };
+  
   
   useEffect(() => {
     if (!codigo) {
@@ -184,9 +205,16 @@ function Producto() {
                   <Form.Group className="mb-3" controlId="product-quantity">
                     <Form.Label>Cantidad</Form.Label>
                     <Form.Control 
-                      type="number" value={cantidad} min="1"
-                      onChange={(e) => setCantidad(parseInt(e.target.value))}
+                      type="number" 
+                      value={cantidad} 
+                      onChange={handleCantidadChange} // <--- USAMOS LA NUEVA FUNCIÓN
+                      min="1" 
+                      max={MAX_CANTIDAD} // Ayuda visual al navegador
                       className="input-quantity"
+                      onKeyDown={(e) => {
+                          // Evitamos escribir signos menos, puntos o 'e' (exponencial)
+                          if (["-", "+", "e", "."].includes(e.key)) e.preventDefault();
+                      }}
                     />
                   </Form.Group>
                   <Button variant="primary" type="submit" className="btn-principal w-100">

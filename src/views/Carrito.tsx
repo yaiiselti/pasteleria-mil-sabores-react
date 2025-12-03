@@ -8,6 +8,7 @@ import ModalConfirmacion from '../components/ModalConfirmacion';
 import type { IItemCarrito } from '../context/CarritoContext';
 
 function Carrito() {
+  const MAX_CANTIDAD = 20; // Mismo límite
   
   // 2. Consumimos AuthContext
   const { isAuthenticated } = useAuth();
@@ -73,11 +74,21 @@ function Carrito() {
   };
 
   const handleActualizarCantidad = (idUnico: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value);
-    if (!isNaN(val) && val >= 0) {
-      actualizarCantidad(idUnico, val);
+    let val = parseInt(e.target.value);
+
+    // Protección contra valores no numéricos
+    if (isNaN(val)) return; 
+
+    // Lógica de Límite
+    if (val < 1) val = 1; // Nunca permitimos 0 escribiendo
+    if (val > MAX_CANTIDAD) {
+        val = MAX_CANTIDAD;
+        // Opcional: Podrías mostrar una notificación aquí, pero puede ser molesto en el carrito
     }
+
+    actualizarCantidad(idUnico, val);
   };
+  
 
   return (
     <Container className="py-5">
@@ -165,8 +176,13 @@ function Carrito() {
                         type="number"
                         className="input-quantity"
                         value={item.cantidad}
-                        min="0" 
+                        min="1"
+                        max={MAX_CANTIDAD}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleActualizarCantidad(item.idUnico, e)}
+                        onKeyDown={(e) => {
+                            // Bloqueamos caracteres inválidos en el teclado
+                            if (["-", "+", "e", "."].includes(e.key)) e.preventDefault();
+                        }}
                       />
                     </Col>
                     
