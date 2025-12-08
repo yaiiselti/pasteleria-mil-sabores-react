@@ -1,16 +1,16 @@
+
 import { useState } from 'react';
 import { Container, Row, Col, Button, Image, Form, Alert, Modal } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useCarrito } from '../hooks/useCarrito';
-// 1. Importamos Auth para saber si es invitado
 import { useAuth } from '../context/AuthContext';
 import ModalConfirmacion from '../components/ModalConfirmacion';
 import type { IItemCarrito } from '../context/CarritoContext';
 
 function Carrito() {
-  const MAX_CANTIDAD = 20; // Mismo límite
+  // MODIFICADO: Límite Técnico Nivel 3
+  const MAX_CANTIDAD = 1000; 
   
-  // 2. Consumimos AuthContext
   const { isAuthenticated } = useAuth();
 
   const { 
@@ -22,16 +22,13 @@ function Carrito() {
     totalPrecio 
   } = useCarrito();
 
-  // Estados Modales
   const [modalShow, setModalShow] = useState(false);
   const [itemParaEliminar, setItemParaEliminar] = useState<IItemCarrito | null>(null);
   
-  // Estados Edición Mensaje
   const [showEditModal, setShowEditModal] = useState(false);
   const [itemAEditar, setItemAEditar] = useState<IItemCarrito | null>(null);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState('');
 
-  // --- FUNCIÓN DE FORMATEO DE MONEDA ---
   const formatoMoneda = (valor: number | string) => {
     const numero = Number(valor);
     return new Intl.NumberFormat('es-CL', {
@@ -40,7 +37,6 @@ function Carrito() {
     }).format(numero);
   };
 
-  // --- MANEJADORES ELIMINAR ---
   const handleShowModal = (item: IItemCarrito) => {
     setItemParaEliminar(item);
     setModalShow(true);
@@ -58,7 +54,6 @@ function Carrito() {
     handleCloseModal();
   };
 
-  // --- MANEJADORES EDITAR ---
   const abrirModalEditar = (item: IItemCarrito) => {
     setItemAEditar(item);
     setNuevoMensajeTexto(item.mensaje);
@@ -76,25 +71,26 @@ function Carrito() {
   const handleActualizarCantidad = (idUnico: number, e: React.ChangeEvent<HTMLInputElement>) => {
     let val = parseInt(e.target.value);
 
-    // Protección contra valores no numéricos
     if (isNaN(val)) return; 
 
-    // Lógica de Límite
-    if (val < 1) val = 1; // Nunca permitimos 0 escribiendo
+    // Lógica Clamp Nivel 3 también en el Carrito
+    if (val < 1) val = 1; 
     if (val > MAX_CANTIDAD) {
         val = MAX_CANTIDAD;
-        // Opcional: Podrías mostrar una notificación aquí, pero puede ser molesto en el carrito
+        // La alerta visual global de "Mayorista" informará al usuario
     }
 
     actualizarCantidad(idUnico, val);
   };
-  
+
+  // Detectar Nivel 2 (Mayorista) para Alerta Global
+  const hayItemsMayoristas = items.some(item => item.cantidad > 20);
 
   return (
     <Container className="py-5">
       <h2 className="text-center logo-text mb-4">Mi carrito de compras</h2>
 
-      {/* 3. AVISO DE INVITADO */}
+      {/* Alerta de Invitado (Existente) */}
       {!isAuthenticated && items.length > 0 && (
         <Alert variant="warning" className="mb-4 border-warning shadow-sm">
           <div className="d-flex align-items-center">
@@ -107,6 +103,21 @@ function Carrito() {
             </div>
           </div>
         </Alert>
+      )}
+
+      {/* NUEVO: Alerta Nivel 2 (Mayorista) */}
+      {hayItemsMayoristas && items.length > 0 && (
+         <Alert variant="info" className="mb-4 shadow-sm border-info">
+            <div className="d-flex align-items-center">
+              <i className="fa-solid fa-boxes-stacked fa-2x me-3 text-info"></i>
+              <div>
+                <strong>Pedido Mayorista Detectado</strong>
+                <p className="mb-0 small">
+                  Tienes productos con más de 20 unidades. Tu pedido quedará en estado <strong>"Por Confirmar Stock"</strong> hasta ser aprobado por un administrador.
+                </p>
+              </div>
+            </div>
+         </Alert>
       )}
 
       {items.length === 0 ? (
@@ -135,7 +146,6 @@ function Carrito() {
                       <h5 className="mb-1">{item.nombre}</h5>
                       
                       <div className="d-flex align-items-center mt-1">
-                        {/* 4. VISUALIZACIÓN PROTEGIDA (Truncate) */}
                         <div 
                           className="text-muted small me-2 text-truncate carrito-mensaje-preview" 
                           title={item.mensaje || "Sin mensaje personalizado"}
@@ -180,7 +190,6 @@ function Carrito() {
                         max={MAX_CANTIDAD}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleActualizarCantidad(item.idUnico, e)}
                         onKeyDown={(e) => {
-                            // Bloqueamos caracteres inválidos en el teclado
                             if (["-", "+", "e", "."].includes(e.key)) e.preventDefault();
                         }}
                       />
@@ -205,10 +214,10 @@ function Carrito() {
 
           <Col md={12} lg={4}>
             <aside className="cart-summary p-3">
+              {/* ... Resumen del pedido se mantiene INTACTO ... */}
               <h3 className="text-center">Resumen del Pedido</h3>
               <hr />
               
-              {/* 5. RESUMEN DETALLADO (Lista de productos) */}
               <div className="mb-3">
                 <h6 className="text-uppercase text-muted small fw-bold mb-2">Detalle:</h6>
                 <ul className="list-unstyled small text-secondary mb-0">
@@ -242,6 +251,7 @@ function Carrito() {
         </Row>
       )}
 
+      {/* ... Modales se mantienen INTACTOS ... */}
       <ModalConfirmacion
         show={modalShow}
         titulo="Confirmar Eliminación"
@@ -251,7 +261,6 @@ function Carrito() {
         <p>¿Estás seguro de que quieres eliminar <strong>{itemParaEliminar?.nombre}</strong> del carrito?</p>
       </ModalConfirmacion>
 
-      {/* 6. MODAL DE EDICIÓN CON LÍMITE */}
       <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title className="logo-text text-primary">Editar Mensaje</Modal.Title>

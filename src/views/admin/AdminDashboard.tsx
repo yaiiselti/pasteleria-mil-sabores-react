@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Row, Col, Card } from 'react-bootstrap';
-import { Link } from 'react-router-dom'; // Importamos Link para navegar
+import { Row, Col, Card, Alert } from 'react-bootstrap';
+import { Link } from 'react-router-dom'; 
 import { getProductos, getAllResenas, getAllPedidos } from '../../services/PasteleriaService';
 import { getUsuarios } from '../../services/AdminService';
 import { getAllMensajes } from '../../services/ContactoService'; 
 
 function AdminDashboard() {
-  // Estados para guardar los conteos reales
   const [totalProductos, setTotalProductos] = useState(0);
   const [totalUsuarios, setTotalUsuarios] = useState(0);
   const [totalResenas, setTotalResenas] = useState(0);
   const [totalPedidos, setTotalPedidos] = useState(0);
   const [totalMensajes, setTotalMensajes] = useState(0);
+  
+  // 1. NUEVO ESTADO: Contador específico para Nivel 2 (Mayorista)
+  const [pedidosPorConfirmar, setPedidosPorConfirmar] = useState(0);
 
-  // Cargar datos al montar el componente
   useEffect(() => {
     const cargarDatos = async () => {
       const prods = await getProductos();
@@ -21,11 +22,16 @@ function AdminDashboard() {
       const reviews = await getAllResenas();
       const pedidos = await getAllPedidos();
       const mensajes = await getAllMensajes(); 
+      
       setTotalProductos(prods.length);
       setTotalUsuarios(users.length);
       setTotalResenas(reviews.length);
       setTotalPedidos(pedidos.length);
       setTotalMensajes(mensajes.length);
+
+      // 2. LÓGICA DE DETECCIÓN: Filtramos los que requieren acción inmediata
+      const porConfirmar = pedidos.filter((p: any) => p.estado === 'Por Confirmar Stock');
+      setPedidosPorConfirmar(porConfirmar.length);
     };
     cargarDatos();
   }, []);
@@ -33,11 +39,33 @@ function AdminDashboard() {
   return (
     <div>
       <h2 className="logo-text mb-4">Panel de Control</h2>
-      <p className="text-muted mb-5">Bienvenido al sistema de gestión de Pastelería Mil Sabores.</p>
+
+      {/* 3. ALERTA DE ACCIÓN INMEDIATA: Solo aparece si hay pedidos Nivel 2 */}
+      {pedidosPorConfirmar > 0 ? (
+        <Alert variant="warning" className="mb-4 shadow-sm border-warning d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center">
+                <div className="bg-warning text-dark rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style={{width: '50px', height: '50px'}}>
+                    <i className="fa-solid fa-boxes-stacked fa-xl"></i>
+                </div>
+                <div>
+                    <h5 className="alert-heading mb-1 fw-bold text-dark">
+                        atención, Tienes {pedidosPorConfirmar} pedido(s) Mayorista(s)
+                    </h5>
+                    <p className="mb-0 text-dark">
+                        Requieren confirmación manual de stock antes de pasar a cocina.
+                    </p>
+                </div>
+            </div>
+            <Link to="/admin/pedidos" className="btn btn-dark fw-bold px-4">
+                Revisar Ahora <i className="fa-solid fa-arrow-right ms-2"></i>
+            </Link>
+        </Alert>
+      ) : (
+        <p className="text-muted mb-5">Bienvenido al sistema de gestión de Pastelería Mil Sabores.</p>
+      )}
 
       <Row className="g-4">
 
-        {/* TARJETA 1: PRODUCTOS (Azul) */}
         <Col md={4}>
           <Card
             as={Link}
@@ -56,7 +84,6 @@ function AdminDashboard() {
           </Card>
         </Col>
 
-        {/* TARJETA 2: USUARIOS (Verde) */}
         <Col md={4}>
           <Card
             as={Link}
@@ -93,18 +120,33 @@ function AdminDashboard() {
           </Card>
         </Col>
 
+        {/* 4. MODIFICADO: Tarjeta de Pedidos con indicador visual si hay pendientes */}
         <Col md={4}>
           <Card 
             as={Link} 
             to="/admin/pedidos" 
-            className="border-0 shadow-sm text-white bg-danger h-100 text-decoration-none"
+            className={`border-0 shadow-sm text-white h-100 text-decoration-none ${pedidosPorConfirmar > 0 ? 'bg-warning' : 'bg-danger'}`}
             style={{ transition: 'transform 0.2s' }}
           >
             <Card.Body className="d-flex flex-column justify-content-center align-items-center py-5">
-              <i className="fa-solid fa-receipt fa-3x mb-3 opacity-75"></i>
-              <h1 className="display-4 fw-bold mb-0">{totalPedidos}</h1>
-              <p className="mb-0 fs-5 text-white-50">Pedidos Totales</p>
-              <span className="mt-3 btn btn-light btn-sm rounded-pill px-3 text-danger fw-bold">
+              <div className="position-relative">
+                  <i className={`fa-solid fa-receipt fa-3x mb-3 opacity-75 ${pedidosPorConfirmar > 0 ? 'text-dark' : 'text-white'}`}></i>
+                  {pedidosPorConfirmar > 0 && (
+                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light">
+                        {pedidosPorConfirmar}
+                        <span className="visually-hidden">pedidos por confirmar</span>
+                      </span>
+                  )}
+              </div>
+              
+              <h1 className={`display-4 fw-bold mb-0 ${pedidosPorConfirmar > 0 ? 'text-dark' : 'text-white'}`}>
+                  {totalPedidos}
+              </h1>
+              <p className={`mb-0 fs-5 ${pedidosPorConfirmar > 0 ? 'text-dark opacity-75' : 'text-white-50'}`}>
+                  Pedidos Totales
+              </p>
+              
+              <span className={`mt-3 btn btn-sm rounded-pill px-3 fw-bold ${pedidosPorConfirmar > 0 ? 'btn-dark text-warning' : 'btn-light text-danger'}`}>
                 Gestionar <i className="fa-solid fa-arrow-right ms-1"></i>
               </span>
             </Card.Body>
@@ -133,21 +175,20 @@ function AdminDashboard() {
           <Card
             as={Link}
             to="/"
-            className="border-0 shadow-sm text-white bg-warning h-100 text-decoration-none"
+            className="border-0 shadow-sm text-white bg-dark h-100 text-decoration-none"
             style={{ transition: 'transform 0.2s' }}
           >
             <Card.Body className="d-flex flex-column justify-content-center align-items-center py-5">
-              <i className="fa-solid fa-shop fa-3x mb-3 opacity-75 text-dark"></i>
-              <h1 className="display-4 fw-bold mb-0 text-dark">Tienda</h1>
-              <p className="mb-0 fs-5 text-dark opacity-75">Ver Vista Cliente</p>
-              <span className="mt-3 btn btn-dark btn-sm rounded-pill px-3 fw-bold">
+              <i className="fa-solid fa-shop fa-3x mb-3 opacity-75 text-white"></i>
+              <h1 className="display-4 fw-bold mb-0 text-white">Tienda</h1>
+              <p className="mb-0 fs-5 text-white-50">Ver Vista Cliente</p>
+              <span className="mt-3 btn btn-outline-light btn-sm rounded-pill px-3 fw-bold">
                 Ir Ahora <i className="fa-solid fa-arrow-up-right-from-square ms-1"></i>
               </span>
             </Card.Body>
           </Card>
         </Col>
         
-
       </Row>
     </div>
   );

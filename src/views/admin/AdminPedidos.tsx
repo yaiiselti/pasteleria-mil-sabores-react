@@ -25,7 +25,10 @@ function AdminPedidos() {
   // Estado para marcar items listos (Usamos IDs de Base de Datos)
   const [itemsListos, setItemsListos] = useState<number[]>([]);
 
+  // 1. MODIFICACIÓN ESTRATÉGICA: Agregamos el Estado de Nivel 2 (Mayorista)
+  // Lo ponemos primero o con un color distintivo (Naranja Fuerte) para llamar la atención del Admin.
   const ESTADOS_PEDIDO = [
+    { value: 'Por Confirmar Stock', label: '⏳ Por Confirmar Stock', color: '#fd7e14', variant: 'warning' }, // <--- NUEVO
     { value: 'Pendiente', label: '🟡 Pendiente', color: '#ffc107', variant: 'warning' },
     { value: 'En Preparación', label: '🔵 En Preparación', color: '#0dcaf0', variant: 'info' },
     { value: 'En Reparto', label: '🚚 En Reparto', color: '#0d6efd', variant: 'primary' },
@@ -72,8 +75,16 @@ function AdminPedidos() {
   const pedidosVisibles = pedidosFiltrados.slice(0, visibleCount);
 
   const handleEstadoChange = async (id: number, nuevoEstado: string) => {
+    // Aquí el Admin aprueba el pedido mayorista pasándolo a 'Pendiente' u otro estado
     await updateEstadoPedido(id, nuevoEstado);
-    setMensajeExito(`Pedido #${id} actualizado a: ${nuevoEstado}`);
+    
+    // Feedback específico si aprobó un mayorista
+    if (nuevoEstado === 'Pendiente') {
+        setMensajeExito(`Pedido #${id} APROBADO y enviado a cocina.`);
+    } else {
+        setMensajeExito(`Pedido #${id} actualizado a: ${nuevoEstado}`);
+    }
+    
     await cargarDatos();
     setTimeout(() => setMensajeExito(''), 3000);
   };
@@ -98,10 +109,9 @@ function AdminPedidos() {
   const handleVerDetalle = (pedido: IPedido) => {
     setPedidoSeleccionado(pedido);
 
-    // Extraemos los IDs reales de la base de datos
     const listosPrevios = pedido.productos
       .filter((p: any) => p.listo === true)
-      .map((p: any) => p.id); // <--- CAMBIO AQUÍ
+      .map((p: any) => p.id); 
 
     setItemsListos(listosPrevios);
     setShowModalDetalle(true);
@@ -110,10 +120,9 @@ function AdminPedidos() {
   const handleGuardarCambiosDetalle = async () => {
     if (!pedidoSeleccionado) return;
 
-    // Actualizamos usando el ID real para que el Backend sepa cuál es cuál
     const productosActualizados = pedidoSeleccionado.productos.map((prod: any) => ({
       ...prod,
-      listo: itemsListos.includes(prod.id) // <--- CAMBIO AQUÍ
+      listo: itemsListos.includes(prod.id) 
     }));
 
     await updatePedidoProductos(pedidoSeleccionado.id, productosActualizados);
@@ -123,7 +132,7 @@ function AdminPedidos() {
     setTimeout(() => setMensajeExito(''), 3000);
   };
 
-  const toggleItemListo = (id: number) => { // Recibe ID real
+  const toggleItemListo = (id: number) => { 
     setItemsListos(prev =>
       prev.includes(id)
         ? prev.filter(itemId => itemId !== id)
@@ -133,6 +142,7 @@ function AdminPedidos() {
 
   const getBadgeVariant = (estado: string) => {
     const config = ESTADOS_PEDIDO.find(e => e.value === estado);
+    // Fallback visual si el estado no coincide exactamente
     return config ? config.variant : 'secondary';
   };
 
@@ -219,7 +229,7 @@ function AdminPedidos() {
                   <small className="text-muted">{p.cliente?.email}</small>
                 </td>
                 <td className="fw-bold text-success">${p.total.toLocaleString('es-CL')}</td>
-                <td style={{ minWidth: '180px' }}>
+                <td style={{ minWidth: '200px' }}> {/* Aumentamos un poco el ancho para el nuevo estado largo */}
                   <Form.Select
                     size="sm"
                     value={p.estado || 'Pendiente'}
@@ -227,7 +237,8 @@ function AdminPedidos() {
                     className="fw-bold border-2"
                     style={{
                       borderColor: getStatusColor(p.estado),
-                      color: getStatusColor(p.estado)
+                      color: getStatusColor(p.estado),
+                      backgroundColor: p.estado === 'Por Confirmar Stock' ? '#fff3cd' : 'white' // Fondo sutil para destacar
                     }}
                   >
                     {ESTADOS_PEDIDO.map((estado) => (
@@ -281,8 +292,9 @@ function AdminPedidos() {
         </div>
       )}
 
-      {/* --- MODAL DETALLE PEDIDO --- */}
+      {/* --- MODAL DETALLE PEDIDO (INTACTO, SOLO RECIBE DATOS) --- */}
       <Modal show={showModalDetalle} onHide={() => setShowModalDetalle(false)} size="xl" centered>
+        {/* ... (El contenido del modal es el mismo del archivo original, no requiere cambios lógicos) ... */}
         <Modal.Header closeButton className="bg-light">
           <Modal.Title className="logo-text text-primary">
             <i className="fa-solid fa-clipboard-list me-2"></i>
@@ -334,13 +346,13 @@ function AdminPedidos() {
                 <div className="d-grid gap-3" style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '5px' }}>
                   {pedidoSeleccionado.productos.map((prod: any) => {
                     const disponible = verificarDisponibilidad(prod.codigo);
-                    const isReady = itemsListos.includes(prod.id); // <--- CAMBIO AQUÍ
-                    const ticketId = getTicketId(prod.id);         // <--- CAMBIO AQUÍ
+                    const isReady = itemsListos.includes(prod.id); 
+                    const ticketId = getTicketId(prod.id);         
                     const categoria = getCategoriaProducto(prod.codigo);
 
                     return (
                       <Card
-                        key={prod.id} // <--- CAMBIO CRÍTICO: KEY ÚNICA DE BD
+                        key={prod.id} 
                         className={`border-0 shadow-sm transition-all ${isReady ? 'bg-success bg-opacity-10' : 'bg-white'}`}
                         style={{
                           borderLeft: `5px solid ${isReady ? '#198754' : '#0d6efd'}`,
@@ -349,7 +361,6 @@ function AdminPedidos() {
                       >
                         <Card.Body className="p-3">
                           <div className="d-flex justify-content-between">
-                            {/* SECCIÓN IZQUIERDA: INFO TICKET */}
                             <div className="d-flex flex-column gap-1 flex-grow-1">
                               <div className="d-flex align-items-center gap-2 mb-2">
                                 <Badge bg="dark" className="font-monospace px-2 py-1">
@@ -367,7 +378,6 @@ function AdminPedidos() {
                                 <span><i className="fa-solid fa-dollar-sign me-1"></i> {prod.precio.toLocaleString('es-CL')} c/u</span>
                               </div>
 
-                              {/* SECCIÓN MENSAJE / DEDICATORIA */}
                               <div className={`mt-3 p-3 rounded border ${prod.mensaje ? 'bg-warning bg-opacity-10 border-warning' : 'bg-light border-light'}`}>
                                 <div className="d-flex align-items-start">
                                   <i className={`fa-solid fa-pen-nib mt-1 me-2 ${prod.mensaje ? 'text-warning' : 'text-muted'}`}></i>
@@ -382,7 +392,6 @@ function AdminPedidos() {
                               </div>
                             </div>
 
-                            {/* SECCIÓN DERECHA: CANTIDAD Y CHECK */}
                             <div className="d-flex flex-column align-items-end justify-content-between ps-3 border-start ms-3" style={{ minWidth: '120px' }}>
                               <div className="text-end">
                                 <small className="text-muted d-block">Cantidad</small>
@@ -392,9 +401,9 @@ function AdminPedidos() {
                               <div className="mt-3 w-100 text-end">
                                 <Form.Check
                                   type="checkbox"
-                                  id={`check-${prod.id}`} // <--- ID ÚNICO REAL
+                                  id={`check-${prod.id}`} 
                                   checked={isReady}
-                                  onChange={() => toggleItemListo(prod.id)} // <--- ID ÚNICO REAL
+                                  onChange={() => toggleItemListo(prod.id)} 
                                   label={isReady ? "LISTO" : "PENDIENTE"}
                                   className={`fw-bold user-select-none ${isReady ? 'text-success' : 'text-secondary'}`}
                                   style={{ cursor: 'pointer' }}
@@ -409,7 +418,6 @@ function AdminPedidos() {
                 </div>
 
                 <div className="mt-4 pt-3 border-top bg-white sticky-bottom">
-
                   {(pedidoSeleccionado.descuento && pedidoSeleccionado.descuento > 0) ? (
                     <div className="d-flex flex-column align-items-end">
                       <div className="d-flex justify-content-between w-50 mb-1 text-muted">

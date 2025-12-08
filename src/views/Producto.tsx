@@ -1,9 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Image, Form, Button, Spinner, Alert, Card, ListGroup } from 'react-bootstrap';
 import { IconoFacebook, IconoInstagram, IconoWhatsapp } from '../components/Iconos';
 import { useParams, Link } from 'react-router-dom';
-
-// 1. AGREGAMOS getProductos A LA IMPORTACIÓN
 import { getProductoByCodigo, getResenasPorProducto, saveResena, getProductos } from '../services/PasteleriaService';
 import type { IProducto, IResena } from '../services/PasteleriaService';
 import { useCarrito } from '../hooks/useCarrito';
@@ -12,7 +11,7 @@ import { useNotification } from '../context/NotificationContext';
 import { StarRating } from '../components/StarRating'; 
 
 function Producto() {
-
+  // ... hooks (useParams, useCarrito, etc) se mantienen igual
   const { codigo } = useParams(); 
   const { agregarAlCarrito } = useCarrito();
   const { user, isAuthenticated } = useAuth();
@@ -20,7 +19,6 @@ function Producto() {
 
   const [producto, setProducto] = useState<IProducto | null>(null);
   const [resenas, setResenas] = useState<IResena[]>([]); 
-  // 2. NUEVO ESTADO: Para guardar los productos recomendados
   const [relacionados, setRelacionados] = useState<IProducto[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -29,7 +27,9 @@ function Producto() {
   const [imagenPrincipal, setImagenPrincipal] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [cantidad, setCantidad] = useState(1);
-  const MAX_CANTIDAD = 20; // Límite de seguridad
+  
+  // MODIFICADO: Límite Técnico Nivel 3
+  const MAX_CANTIDAD = 1000; 
 
   const [nuevoComentario, setNuevoComentario] = useState('');
   const [nuevaCalificacion, setNuevaCalificacion] = useState(5);
@@ -37,58 +37,50 @@ function Producto() {
   const handleCantidadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let valor = parseInt(e.target.value);
 
-    // 1. Si borra todo (NaN), lo dejamos temporalmente vacío o en 1
     if (isNaN(valor)) {
         setCantidad(1); 
         return;
     }
 
-    // 2. Aplicamos límites (Clamp)
+    // Lógica Clamp Nivel 3: Protección input manual
     if (valor < 1) valor = 1;
     if (valor > MAX_CANTIDAD) {
         valor = MAX_CANTIDAD;
-        showNotification(`El máximo permitido es ${MAX_CANTIDAD} unidades.`, 'warning');
+        // Aviso de Ventas Corporativas
+        showNotification(`Para pedidos sobre ${MAX_CANTIDAD} unidades, contacte a ventas corporativas.`, 'info');
     }
 
     setCantidad(valor);
   };
   
-  
+  // ... useEffect, handleThumbnailClick, handleAddToCart se mantienen IGUAL
   useEffect(() => {
     if (!codigo) {
       setError("No se ha especificado un código de producto.");
       setLoading(false);
       return;
     }
-
-    // Resetear estados al cambiar de producto (por si navegas desde recomendaciones)
     setCantidad(1);
     setMensaje('');
     setNuevoComentario('');
-    window.scrollTo(0, 0); // Subir al inicio
+    window.scrollTo(0, 0); 
 
     const cargarTodo = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        // 3. MODIFICADO: Cargamos también TODOS los productos para filtrar recomendaciones
         const [prod, reviews, todosLosProductos] = await Promise.all([
           getProductoByCodigo(codigo),
           getResenasPorProducto(codigo),
           getProductos()
         ]);
-        
         setProducto(prod);
         setImagenPrincipal(prod.imagenes[0]);
         setResenas(reviews); 
-
         const sugerencias = todosLosProductos
           .filter(p => p.categoria === prod.categoria && p.codigo !== prod.codigo)
-          .slice(0, 3); // Tomamos solo 3 para mostrar
-
+          .slice(0, 3); 
         setRelacionados(sugerencias);
-
       } catch (err) {
         setError("Producto no encontrado.");
       } finally {
@@ -97,7 +89,7 @@ function Producto() {
     };
     cargarTodo();
   }, [codigo]); 
-  
+
   const handleThumbnailClick = (urlImagen: string) => {
     setImagenPrincipal(urlImagen);
   };
@@ -112,10 +104,10 @@ function Producto() {
   };
 
   const handleShare = (red: 'fb' | 'wa'| 'ig') => {
+    // ... lógica handleShare intacta
     const url = window.location.href;
     const text = encodeURIComponent(`¡Mira esta deliciosa ${producto?.nombre} de Pastelería Mil Sabores!`);
     let shareUrl = '';
-
     if (red === 'fb') shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
     else if (red === 'wa') shareUrl = `https://api.whatsapp.com/send?text=${text} ${url}`;
     else if (red === 'ig') shareUrl = `https://www.instagram.com/?url=${url}&text=${text}`; 
@@ -123,14 +115,13 @@ function Producto() {
   };
 
   const handleSubmitResena = async (e: React.FormEvent) => {
+    // ... lógica handleSubmitResena intacta
     e.preventDefault();
     if (!producto || !user) return;
-
     if (nuevoComentario.trim().length < 5) {
       showNotification('El comentario es muy corto.', 'warning');
       return;
     }
-
     const nueva: Omit<IResena, 'id'> = {
       codigoProducto: producto.codigo,
       emailUsuario: user.email,
@@ -139,12 +130,9 @@ function Producto() {
       comentario: nuevoComentario,
       fecha: new Date().toLocaleDateString()
     };
-
     await saveResena(nueva);
-    
     const reviewsActualizadas = await getResenasPorProducto(producto.codigo);
     setResenas(reviewsActualizadas);
-    
     setNuevoComentario('');
     setNuevaCalificacion(5);
     showNotification('¡Gracias por tu opinión!', 'success');
@@ -163,9 +151,9 @@ function Producto() {
     <Container className="py-5">
       {producto && (
         <>
-          {/* --- DETALLE PRODUCTO (INTACTO) --- */}
           <Row className="mb-5">
             <Col md={6}>
+               {/* ... Gallery intacta ... */}
               <div className="product-gallery">
                 <div className="gallery-main-image">
                   <Image src={imagenPrincipal} alt={producto.nombre} fluid />
@@ -189,6 +177,7 @@ function Producto() {
                 <p className="product-description">{producto.descripcion}</p>
 
                 <Form onSubmit={handleAddToCart}>
+                  {/* ... Mensaje personalizado intacto ... */}
                   <Form.Group className="mb-3" controlId="product-custom-msg">
                     <Form.Label>Mensaje Personalizado (Opcional)</Form.Label>
                     <Form.Control 
@@ -202,26 +191,36 @@ function Producto() {
                       {mensaje.length}/50 caracteres
                     </Form.Text>
                   </Form.Group>
+
                   <Form.Group className="mb-3" controlId="product-quantity">
                     <Form.Label>Cantidad</Form.Label>
                     <Form.Control 
                       type="number" 
                       value={cantidad} 
-                      onChange={handleCantidadChange} // <--- USAMOS LA NUEVA FUNCIÓN
+                      onChange={handleCantidadChange} 
                       min="1" 
-                      max={MAX_CANTIDAD} // Ayuda visual al navegador
+                      max={MAX_CANTIDAD} 
                       className="input-quantity"
                       onKeyDown={(e) => {
-                          // Evitamos escribir signos menos, puntos o 'e' (exponencial)
                           if (["-", "+", "e", "."].includes(e.key)) e.preventDefault();
                       }}
                     />
                   </Form.Group>
+
+                  {/* NUEVO: Alerta Nivel 2 (Mayorista) */}
+                  {cantidad > 20 && (
+                    <Alert variant="warning" className="mb-3 py-2 small border-warning">
+                       <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                       <strong>Venta Mayorista:</strong> Pedido sujeto a confirmación de stock y fecha.
+                    </Alert>
+                  )}
+
                   <Button variant="primary" type="submit" className="btn-principal w-100">
                     Añadir al carrito
                   </Button>
                 </Form>
 
+                {/* ... Share buttons y resto del return intacto ... */}
                 <div className="product-share mt-4 pt-3 border-top">
                    <h5 className="share-title mb-3">Compartir este producto:</h5>
                    <div className="share-icons d-flex gap-3">
@@ -240,7 +239,8 @@ function Producto() {
             </Col>
           </Row>
 
-          {/* --- OPINIONES (INTACTO) --- */}
+          {/* ... Opiniones y Relacionados se mantienen EXACTAMENTE IGUAL ... */}
+          {/* (Omito el resto del código visual para brevedad, pero en tu archivo debe ir completo) */}
           <Row className="mb-5">
             <Col md={12}>
               <h3 className="logo-text mb-4 border-bottom pb-2">Opiniones de Clientes</h3>
@@ -270,6 +270,7 @@ function Producto() {
               )}
             </Col>
             <Col md={5} className="mt-4 mt-md-0">
+               {/* Formulario de Reseñas Intacto */}
               <Card className="shadow-sm border-0 bg-light">
                 <Card.Body className="p-4">
                   <h5 className="mb-3 fw-bold">Deja tu opinión</h5>
@@ -320,8 +321,6 @@ function Producto() {
               {relacionados.map((item) => (
                 <Col key={item.codigo} md={3} xs={6} className="mb-4">
                   <Card className="h-100 border-0 shadow-sm product-card bg-white overflow-hidden">
-                    
-                    {/* Contenedor de imagen con efecto Zoom suave */}
                     <div className="position-relative" style={{ height: '160px', overflow: 'hidden' }}>
                       <Card.Img 
                         variant="top" 
@@ -332,7 +331,6 @@ function Producto() {
                         onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                       />
                     </div>
-                    
                     <Card.Body className="d-flex flex-column text-center p-3">
                       <Card.Title 
                         className="fs-6 mb-1 text-truncate" 
@@ -341,14 +339,12 @@ function Producto() {
                       >
                         {item.nombre}
                       </Card.Title>
-                      
                       <Card.Text 
                         className="fw-bold fs-6 mb-2" 
                         style={{ color: 'var(--color-acento-choco)' }}
                       >
                         ${item.precio.toLocaleString('es-CL')}
                       </Card.Text>
-                      
                       <Link 
                         to={`/producto/${item.codigo}`} 
                         className="btn btn-principal btn-sm mt-auto stretched-link rounded-pill px-3"

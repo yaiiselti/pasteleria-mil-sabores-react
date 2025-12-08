@@ -12,7 +12,7 @@ function Checkout() {
   const { items, totalPrecio, subtotal, descuentoTotal, vaciarCarrito } = useCarrito();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { showNotification } = useNotification(); // Hook de notificaciones
+  const { showNotification } = useNotification(); 
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -115,39 +115,28 @@ function Checkout() {
     
     if (validar()) {
       
-      // --- 2. VALIDACIÓN DE DISPONIBILIDAD (NOVEDAD) ---
+      // --- VALIDACIÓN DE DISPONIBILIDAD ---
       try {
-        // Traemos la lista fresca de productos
         const productosActuales = await getProductos();
-        
-        // Buscamos si hay algún producto en el carrito que ya no esté activo
         const productosConflictivos = items.filter(itemCarrito => {
             const productoReal = productosActuales.find(p => p.codigo === itemCarrito.codigo);
-            // Es conflicto si: No existe OR activo es false
             return !productoReal || productoReal.activo === false;
         });
 
         if (productosConflictivos.length > 0) {
-            // ¡ALERTA! Hay productos "zombies" en el carrito
             const nombres = productosConflictivos.map(p => p.nombre).join(", ");
-            
-            showNotification(`Lo sentimos, los siguientes productos ya no están disponibles: ${nombres}. Por favor, revísalos en tu carrito.`, 'danger');
-            
-            // Opcional: Podríamos borrarlos automáticamente o redirigir al carrito
-            // navigate('/carrito'); 
-            return; // DETENEMOS LA COMPRA
+            showNotification(`Lo sentimos, los siguientes productos ya no están disponibles: ${nombres}.`, 'danger');
+            return; 
         }
-
       } catch (error) {
         console.error("Error al validar disponibilidad", error);
-        showNotification("Error técnico al validar el pedido. Intente nuevamente.", 'danger');
+        showNotification("Error técnico al validar el pedido.", 'danger');
         return;
       }
-      // --------------------------------------------------
 
       const ahora = new Date();
       const nuevaOrden = {
-        id: Math.floor(Math.random() * 1000000),
+        id: Math.floor(Math.random() * 1000000), // ID temporal, el backend dará el real
         fechaEmision: ahora.toLocaleDateString(),
         horaEmision: ahora.toLocaleTimeString(), 
         fechaEntrega: formData.fechaEntrega,     
@@ -156,14 +145,16 @@ function Checkout() {
         subtotal: subtotal,
         descuento: descuentoTotal,
         total: totalPrecio,
-        estado: 'Pendiente' 
+        
+        // --- CORRECCIÓN CRÍTICA DE SEGURIDAD ---
+        // Enviamos estado vacío para que el Backend decida si es Pendiente o Mayorista
+        // Si enviamos 'Pendiente' aquí, podríamos sobrescribir la lógica de seguridad.
+        estado: '' 
       };
 
       try {
         localStorage.setItem('ultimaOrden', JSON.stringify(nuevaOrden));
-        const historial = JSON.parse(localStorage.getItem('historialPedidos') || '[]');
-        historial.push(nuevaOrden);
-        localStorage.setItem('historialPedidos', JSON.stringify(historial));
+        // Nota: No guardamos en historialPedidos aquí, esperamos a que el backend confirme en la siguiente vista
       } catch (error) {
         console.error("Error al guardar orden:", error);
         return;
@@ -319,6 +310,7 @@ function Checkout() {
           </Card>
         </Col>
 
+        {/* COLUMNA LATERAL - RESUMEN */}
         <Col md={5} lg={4}>
           <Card className="shadow-sm border-0 bg-light sticky-top" style={{ top: '100px' }}>
             <Card.Body>

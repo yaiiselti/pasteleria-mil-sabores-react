@@ -83,7 +83,7 @@ function Perfil() {
           run: usuarioReal.run,
           region: usuarioReal.region || '',
           comuna: usuarioReal.comuna || '',
-          direccion: usuarioReal.direccion || '', // Ahora esto no dará error gracias a AuthContext y AdminService
+          direccion: usuarioReal.direccion || '', 
           password: '',        
           confirmPassword: ''
         });
@@ -93,8 +93,6 @@ function Perfil() {
     }
   };
 
-  // --- CORRECCIÓN DEL ONCHANGE ---
-  // Usamos 'any' en el evento para evitar conflictos de tipos entre Input y Select
   const handleChange = (e: React.ChangeEvent<any>) => {
     const { name, value } = e.target;
     setDatosEditables(prev => {
@@ -170,14 +168,16 @@ function Perfil() {
     }
   };
 
+  // 1. MODIFICADO: Mapeo de Colores de Estado
   const getBadgeVariant = (estado: string) => {
     switch (estado) {
-      case 'Pendiente': return 'warning';
+      case 'Por Confirmar Stock': return 'warning'; // Nivel 2: Amarillo
+      case 'Pendiente': return 'secondary';         // Nivel 1: Gris o Amarillo suave (cambiado a secondary para diferenciar)
       case 'En Preparación': return 'info';
       case 'En Reparto': return 'primary';
       case 'Entregado': return 'success';
       case 'Cancelado': return 'danger';
-      default: return 'secondary';
+      default: return 'light';
     }
   };
 
@@ -281,7 +281,11 @@ function Perfil() {
                           </td>
                           <td className="fw-bold">${pedido.total?.toLocaleString('es-CL')}</td>
                           <td>
-                            <Badge bg={getBadgeVariant(pedido.estado || 'Pendiente')}>
+                            {/* 2. MODIFICADO: Badge con texto oscuro si es warning */}
+                            <Badge 
+                                bg={getBadgeVariant(pedido.estado || 'Pendiente')}
+                                text={getBadgeVariant(pedido.estado) === 'warning' ? 'dark' : 'light'}
+                            >
                               {pedido.estado || 'Pendiente'}
                             </Badge>
                           </td>
@@ -307,8 +311,10 @@ function Perfil() {
         </Col>
       </Row>
 
+      {/* ... Modales de Edición (Sin cambios) ... */}
       <Modal show={showModalEditar} onHide={() => setShowModalEditar(false)} centered backdrop="static" size="lg">
-        <Modal.Header closeButton>
+         {/* ... (Contenido Modal Editar intacto) ... */}
+         <Modal.Header closeButton>
             <Modal.Title className="logo-text text-primary">Editar Mis Datos</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -408,10 +414,15 @@ function Perfil() {
         <Modal.Body className="p-4">
           {pedidoSeleccionado && (
             <>
+                {/* ... (Detalle Intacto) ... */}
                 <div className="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h6 className="mb-1 text-muted">Estado del Pedido:</h6>
-                        <Badge bg={getBadgeVariant(pedidoSeleccionado.estado)} className="fs-6">
+                        <Badge 
+                            bg={getBadgeVariant(pedidoSeleccionado.estado)} 
+                            text={getBadgeVariant(pedidoSeleccionado.estado) === 'warning' ? 'dark' : 'light'}
+                            className="fs-6"
+                        >
                             {pedidoSeleccionado.estado}
                         </Badge>
                     </div>
@@ -463,11 +474,14 @@ function Perfil() {
                     )}
                 </div>
 
-                {pedidoSeleccionado.estado === 'Pendiente' && (
+                {/* 3. MODIFICADO: Permitimos cancelar también si está 'Por Confirmar Stock' */}
+                {['Pendiente', 'Por Confirmar Stock'].includes(pedidoSeleccionado.estado) && (
                     <Alert variant="light" className="mt-4 border d-flex justify-content-between align-items-center">
                         <div className="small text-muted">
                             <i className="fa-solid fa-circle-info me-2"></i>
-                            ¿Hubo un error? Puedes cancelar mientras esté pendiente.
+                            {pedidoSeleccionado.estado === 'Pendiente' 
+                                ? "¿Hubo un error? Puedes cancelar mientras esté pendiente."
+                                : "¿Cambio de planes? Puedes cancelar tu solicitud mayorista."}
                         </div>
                         <Button variant="outline-danger" size="sm" onClick={handleSolicitarCancelacion}>
                             Cancelar Pedido
