@@ -27,7 +27,7 @@ export const CarritoContext = createContext<CarritoContextType | undefined>(unde
 export const CarritoProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth(); 
 
-  // Función auxiliar para saber dónde guardar/leer (La sacamos para usarla al inicio)
+  // Función auxiliar para saber dónde guardar/leer
   const getStorageConfig = (currentUser: any) => {
     if (currentUser) {
       return { key: `carrito_${currentUser.email}`, storage: localStorage };
@@ -36,9 +36,7 @@ export const CarritoProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // --- CORRECCIÓN AQUÍ: INICIALIZACIÓN PEREZOSA ---
-  // Leemos la memoria ANTES de que React dibuje nada.
-  // Esto evita que se guarde un array vacío encima de tus datos.
+  // Inicialización perezosa (Lazy Initialization)
   const [items, setItems] = useState<IItemCarrito[]>(() => {
     const { key, storage } = getStorageConfig(user);
     try {
@@ -49,14 +47,13 @@ export const CarritoProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  // 1. Efecto para CAMBIAR de usuario (Login/Logout)
-  // Solo recarga si cambia la persona, para traer SU carrito
+  // 1. Efecto para CAMBIAR de usuario
   useEffect(() => {
     const { key, storage } = getStorageConfig(user);
     try {
       const guardado = storage.getItem(key);
       if (guardado) setItems(JSON.parse(guardado));
-      else setItems([]); // Si es usuario nuevo, carrito vacío
+      else setItems([]); 
     } catch { setItems([]); }
   }, [user]);
 
@@ -67,12 +64,11 @@ export const CarritoProvider = ({ children }: { children: ReactNode }) => {
   }, [items, user]);
 
 
-  // --- CÁLCULOS Y LÓGICA (Se mantienen igual) ---
+  // --- CÁLCULOS Y LÓGICA ---
   const subtotal = items.reduce((total, item) => total + (item.precio * item.cantidad), 0);
   let descuentoTotal = 0;
 
   if (user) {
-    // Leemos datos reales del usuario para el descuento
     if (user.fechaNacimiento) {
       const hoy = new Date();
       const cumple = new Date(user.fechaNacimiento);
@@ -90,10 +86,22 @@ export const CarritoProvider = ({ children }: { children: ReactNode }) => {
   const totalPrecio = Math.max(0, subtotal - descuentoTotal);
   const totalItems = items.reduce((total, item) => total + item.cantidad, 0);
 
-  // --- FUNCIONES CRUD ---
+  // --- FUNCIONES CRUD CON DOBLE CANDADO (Nivel 3) ---
+
   const agregarAlCarrito = (producto: IProducto, cantidad: number, mensaje: string) => {
+    // 1. PRE-CÁLCULO DE SEGURIDAD
+    // Calculamos cuánto sumaría el carrito si permitimos esta operación.
+    const totalActual = items.reduce((acc, item) => acc + item.cantidad, 0);
+    const totalFuturo = totalActual + cantidad;
+
+    if (totalFuturo > 1000) {
+      alert(`⚠️ Operación Bloqueada: No puedes agregar ${cantidad} unidades. El carrito excedería el límite técnico de 1000 productos (Actual: ${totalActual}).`);
+      return; // <--- CANDADO ACTIVADO: Rompemos el flujo aquí.
+    }
+
     const mensajeNormalizado = mensaje.trim();
     const itemExistente = items.find(i => i.codigo === producto.codigo && i.mensaje === mensajeNormalizado);
+    
     if (itemExistente) {
       setItems(prev => prev.map(i => i.idUnico === itemExistente.idUnico ? { ...i, cantidad: i.cantidad + cantidad } : i));
     } else {
@@ -105,6 +113,20 @@ export const CarritoProvider = ({ children }: { children: ReactNode }) => {
   
   const actualizarCantidad = (id: number, val: number) => {
     if (val < 1) return eliminarDelCarrito(id);
+
+    // 1. PRE-CÁLCULO DE SEGURIDAD PARA ACTUALIZACIÓN
+    const itemAActualizar = items.find(i => i.idUnico === id);
+    if (itemAActualizar) {
+      const diferencia = val - itemAActualizar.cantidad; // Puede ser positiva (suma) o negativa (resta)
+      const totalActual = items.reduce((acc, item) => acc + item.cantidad, 0);
+      
+      // Solo validamos si estamos AUMENTANDO la cantidad
+      if (diferencia > 0 && (totalActual + diferencia) > 1000) {
+         alert(`⚠️ Límite Alcanzado: No puedes aumentar a ${val} unidades. El total del pedido superaría 1000.`);
+         return; // <--- CANDADO ACTIVADO
+      }
+    }
+
     setItems(prev => prev.map(i => i.idUnico === id ? { ...i, cantidad: val } : i));
   };
 

@@ -461,3 +461,201 @@ body {
 .overlay-warm {
   background: rgba(93, 64, 55, 0.6); /* --color-texto-principal con transparencia */
 }
+
+/* --- 12. Estilos para Confirmación y Seguimiento (NUEVO) --- */
+
+/* Caja del ID de Pedido (Boleta) */
+.caja-id-pedido {
+  background-color: #f8f9fa;
+  border: 2px dashed #dee2e6; /* Borde discontinuo tipo cupón */
+  border-radius: 8px;
+  padding: 2rem;
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 500px; /* Que no se estire demasiado */
+}
+
+/* Botón Copiar Personalizado (Estilo Pastelería) */
+.btn-copiar {
+  background-color: var(--color-acento-choco) !important;
+  border-color: var(--color-acento-choco) !important;
+  color: var(--color-blanco) !important;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+.btn-copiar:hover {
+  background-color: var(--color-texto-principal) !important; /* Oscurece al pasar el mouse */
+  transform: translateY(-1px);
+}
+
+/* Alerta de Aviso Importante (Tono Crema/Dorado) */
+.alerta-aviso {
+  background-color: #fff3cd; /* Fondo crema amarillento */
+  border-left: 5px solid #ffc107; /* Borde lateral amarillo */
+  color: #856404; /* Texto ocre */
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Enlace de seguimiento estilizado */
+.link-seguimiento {
+  color: var(--color-acento-choco);
+  font-weight: bold;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.link-seguimiento:hover {
+  color: var(--color-texto-principal);
+  text-decoration: underline;
+}
+
+/* Reglas de Impresión Globales */
+@media print {
+  .no-print, .main-header, .main-footer, .alert, .btn { display: none !important; }
+  body { background-color: white; }
+  .caja-id-pedido { border: 2px solid #000; } /* Borde sólido al imprimir */
+  #boleta-content { border: none !important; box-shadow: none !important; }
+}
+
+
+/* ESTILOS DE IMPRESIÓN PROFESIONAL (BOLETA) */
+
+/* Recuadro RUT estilo SII (Solo visible o destacado en impresión/boleta) */
+.recuadro-rut {
+  border: 3px solid #cc0000; /* Color rojo característico SII, o usa negro #333 */
+  color: #cc0000;
+  font-weight: bold;
+  text-align: center;
+  padding: 10px;
+  text-transform: uppercase;
+}
+
+.datos-empresa {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+@media print {
+  /* Ocultar elementos de UI (Botones, Alertas, Navegación) */
+  .d-print-none {
+    display: none !important;
+  }
+  
+  /* Mostrar elementos exclusivos de impresión */
+  .d-print-block {
+    display: block !important;
+  }
+
+  /* Resetear estilos para papel blanco */
+  body, .card {
+    background-color: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ajustar tipografía para lectura en papel */
+  body {
+    font-family: 'Arial', sans-serif !important; /* Fuente estándar para documentos */
+    color: #000 !important;
+    font-size: 12pt;
+  }
+
+  /* Forzar bordes de tabla en negro */
+  .table-bordered, .table-bordered td, .table-bordered th {
+    border: 1px solid #000 !important;
+  }
+  
+  /* Recuadro RUT en negro para impresoras monocromáticas (opcional) */
+  .recuadro-rut {
+    border-color: #000 !important;
+    color: #000 !important;
+  }
+}
+
+/* 1. Botón Copiar "Estilo Chocolate" (El que te gustaba) */
+.btn-copiar-choco {
+  background-color: #8B4513 !important; /* Café Chocolate */
+  border-color: #8B4513 !important;
+  color: white !important;
+  font-weight: 600;
+  padding: 0.5rem 1.2rem;
+  border-radius: 50px; /* Bordes muy redondos */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 6px rgba(139, 69, 19, 0.2);
+  transition: all 0.3s ease;
+}
+
+.btn-copiar-choco:hover {
+  background-color: #5D4037 !important; /* Café más oscuro */
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(139, 69, 19, 0.3);
+}
+
+.btn-copiar-choco:active {
+  transform: translateY(0);
+}
+
+/* 2. Tarjeta de Tracking "Sorpresa" (Call to Action) */
+.tracking-card-sorpresa {
+  background: linear-gradient(135deg, #fff3e0 0%, #ddab61 100%); /* Gradiente Crema-Naranja */
+  border: 1px solid #e2a4465e;
+  border-radius: 12px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+  text-decoration: none; /* Para cuando lo envolvamos en Link */
+  display: block; /* Para que el Link ocupe todo */
+  color: #5D4037; /* Texto café */
+}
+
+.tracking-card-sorpresa:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 20px rgba(255, 167, 38, 0.2);
+  border-color: #8B4113;
+}
+
+/* Icono de fondo decorativo */
+.tracking-bg-icon {
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  font-size: 6rem;
+  opacity: 0.1;
+  color: #8B4113;
+  transform: rotate(-15deg);
+}
+
+.btn-tracking-action {
+  background-color: white;
+  color: #8B4113;
+  font-weight: bold;
+  border: none;
+  border-radius: 30px;
+  padding: 8px 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+}
+
+.tracking-card-sorpresa:hover .btn-tracking-action {
+  background-color: #8B4113;
+  color: white;
+}

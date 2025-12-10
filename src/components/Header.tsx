@@ -47,6 +47,11 @@ function Header() {
             <Nav.Link as={Link} to="/blog" className={getActiveClass('/blog')}>
               Blog
             </Nav.Link>
+
+            <Nav.Link as={Link} to="/seguimiento" className={getActiveClass('/seguimiento')}>
+              Rastrear Pedido
+            </Nav.Link>
+
             <Nav.Link as={Link} to="/contacto" className={getActiveClass('/contacto')}>
               Contacto
             </Nav.Link>

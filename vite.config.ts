@@ -14,6 +14,9 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'], // Genera reporte en consola y en HTML
     },
+  },
+  server: {
+    host: true // Esto fuerza a Vite a usar 0.0.0.0
   }
 
 })

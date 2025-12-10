@@ -19,6 +19,7 @@ import Contacto from './views/Contacto';
 import Perfil from './views/Perfil';
 import PagoError from './views/PagoError';
 import NotFound from './views/NotFound'; // <--- IMPORTAR
+import Seguimiento from './views/Seguimiento'; // <--- IMPORTAR
 
 // Vistas Admin
 import AdminLayout from './components/AdminLayout';
@@ -70,6 +71,7 @@ function App() {
           <Route path="/blog-articulo-1" element={<BlogArticulo1 />} />
           <Route path="/blog-articulo-2" element={<BlogArticulo2 />} />
           <Route path="/contacto" element={<Contacto />} />
+          <Route path="/seguimiento" element={<Seguimiento />} />
 
           <Route element={<RutaProtegida />}>
              <Route path="/perfil" element={<Perfil />} />

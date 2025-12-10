@@ -218,3 +218,12 @@ export const toggleProductoListo = async (pedidoId: number, detalleId: number, l
     return false;
   }
 };
+
+// --- NUEVA FUNCIÓN: RASTREO PÚBLICO ---
+export const trackPedido = async (id: number, email: string) => {
+    const response = await fetch(`${API_URL}/pedidos/track?id=${id}&email=${email}`);
+    if (!response.ok) {
+        throw new Error('Pedido no encontrado');
+    }
+    return await response.json();
+};
