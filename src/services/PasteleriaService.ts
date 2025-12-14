@@ -142,6 +142,19 @@ export const getAllPedidos = async (): Promise<IPedido[]> => {
   } catch { return []; }
 };
 
+export const getPedidosByCliente = async (email: string): Promise<IPedido[]> => {
+  try {
+    // CAMBIO: Usamos ?email= para que viajen los caracteres especiales sin problemas
+    const res = await fetch(`${API_URL}/pedidos/cliente?email=${email}`, { 
+      headers: authHeader() 
+    });
+    return res.ok ? await res.json() : [];
+  } catch (error) { 
+    console.error("Error al cargar mis pedidos:", error);
+    return []; 
+  }
+};
+
 export const savePedido = async (pedido: any): Promise<IPedido | null> => {
   try {
     // IMPORTANTE: El pedido que viene del carrito tiene ID random.
@@ -221,9 +234,18 @@ export const toggleProductoListo = async (pedidoId: number, detalleId: number, l
 
 // --- NUEVA FUNCIÓN: RASTREO PÚBLICO ---
 export const trackPedido = async (id: number, email: string) => {
-    const response = await fetch(`${API_URL}/pedidos/track?id=${id}&email=${email}`);
+    const response = await fetch(`${API_URL}/pedidos/${id}/track?email=${email}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    // MODIFICACIÓN: Si falla, lanzamos el objeto completo 'response' 
+    // para poder leer el status (403 o 404) en la pantalla.
     if (!response.ok) {
-        throw new Error('Pedido no encontrado');
+        throw response; 
     }
+
     return await response.json();
 };

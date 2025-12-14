@@ -28,7 +28,7 @@ function AdminPedidos() {
   // 1. MODIFICACIÓN ESTRATÉGICA: Agregamos el Estado de Nivel 2 (Mayorista)
   // Lo ponemos primero o con un color distintivo (Naranja Fuerte) para llamar la atención del Admin.
   const ESTADOS_PEDIDO = [
-    { value: 'Por Confirmar Stock', label: '⏳ Por Confirmar Stock', color: '#fd7e14', variant: 'warning' }, // <--- NUEVO
+    { value: 'Por Confirmar Stock', label: '⏳ Por Confirmar Stock', color: '#fd7e14', variant: 'warning' }, 
     { value: 'Pendiente', label: '🟡 Pendiente', color: '#ffc107', variant: 'warning' },
     { value: 'En Preparación', label: '🔵 En Preparación', color: '#0dcaf0', variant: 'info' },
     { value: 'En Reparto', label: '🚚 En Reparto', color: '#0d6efd', variant: 'primary' },

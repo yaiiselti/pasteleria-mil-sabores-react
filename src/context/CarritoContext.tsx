@@ -2,6 +2,7 @@ import { createContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { IProducto } from "../services/PasteleriaService";
 import { useAuth } from "./AuthContext";
+import { useNotification } from "./NotificationContext"; 
 
 export interface IItemCarrito extends IProducto {
   idUnico: number;
@@ -11,7 +12,7 @@ export interface IItemCarrito extends IProducto {
 
 interface CarritoContextType {
   items: IItemCarrito[];
-  agregarAlCarrito: (producto: IProducto, cantidad: number, mensaje: string) => void;
+  agregarAlCarrito: (producto: IProducto, cantidad: number, mensaje: string) => boolean;
   eliminarDelCarrito: (idUnico: number) => void;
   actualizarCantidad: (idUnico: number, nuevaCantidad: number) => void;
   actualizarMensaje: (idUnico: number, nuevoMensaje: string) => void;
@@ -26,7 +27,7 @@ export const CarritoContext = createContext<CarritoContextType | undefined>(unde
 
 export const CarritoProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth(); 
-
+  const { showNotification } = useNotification();
   // Función auxiliar para saber dónde guardar/leer
   const getStorageConfig = (currentUser: any) => {
     if (currentUser) {
@@ -88,15 +89,17 @@ export const CarritoProvider = ({ children }: { children: ReactNode }) => {
 
   // --- FUNCIONES CRUD CON DOBLE CANDADO (Nivel 3) ---
 
-  const agregarAlCarrito = (producto: IProducto, cantidad: number, mensaje: string) => {
-    // 1. PRE-CÁLCULO DE SEGURIDAD
-    // Calculamos cuánto sumaría el carrito si permitimos esta operación.
+  const agregarAlCarrito = (producto: IProducto, cantidad: number, mensaje: string): boolean => {
+    // 1. CÁLCULO DE SEGURIDAD
     const totalActual = items.reduce((acc, item) => acc + item.cantidad, 0);
     const totalFuturo = totalActual + cantidad;
 
     if (totalFuturo > 1000) {
-      alert(`⚠️ Operación Bloqueada: No puedes agregar ${cantidad} unidades. El carrito excedería el límite técnico de 1000 productos (Actual: ${totalActual}).`);
-      return; // <--- CANDADO ACTIVADO: Rompemos el flujo aquí.
+      showNotification(
+        `el límite del carrito es de 1000 productos en total.`,
+        'danger'
+      );
+      return false;
     }
 
     const mensajeNormalizado = mensaje.trim();
@@ -107,24 +110,24 @@ export const CarritoProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setItems(prev => [...prev, { ...producto, idUnico: Date.now(), cantidad, mensaje: mensajeNormalizado }]);
     }
+    
+    return true;
   };
 
   const eliminarDelCarrito = (id: number) => setItems(prev => prev.filter(i => i.idUnico !== id));
   
   const actualizarCantidad = (id: number, val: number) => {
     if (val < 1) return eliminarDelCarrito(id);
-
-    // 1. PRE-CÁLCULO DE SEGURIDAD PARA ACTUALIZACIÓN
-    const itemAActualizar = items.find(i => i.idUnico === id);
-    if (itemAActualizar) {
-      const diferencia = val - itemAActualizar.cantidad; // Puede ser positiva (suma) o negativa (resta)
-      const totalActual = items.reduce((acc, item) => acc + item.cantidad, 0);
-      
-      // Solo validamos si estamos AUMENTANDO la cantidad
-      if (diferencia > 0 && (totalActual + diferencia) > 1000) {
-         alert(`⚠️ Límite Alcanzado: No puedes aumentar a ${val} unidades. El total del pedido superaría 1000.`);
-         return; // <--- CANDADO ACTIVADO
-      }
+    
+    // VALIDACIÓN EXTRA PARA EL CARRITO (Coherencia)
+    const itemActual = items.find(i => i.idUnico === id);
+    if (itemActual) {
+        const diferencia = val - itemActual.cantidad;
+        const totalActual = items.reduce((acc, item) => acc + item.cantidad, 0);
+        if (totalActual + diferencia > 1000) {
+            showNotification(` No puedes superar los 1000 productos en total.`, 'danger');
+            return;
+        }
     }
 
     setItems(prev => prev.map(i => i.idUnico === id ? { ...i, cantidad: val } : i));

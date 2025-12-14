@@ -26,7 +26,7 @@ function Producto() {
   
   const [imagenPrincipal, setImagenPrincipal] = useState('');
   const [mensaje, setMensaje] = useState('');
-  const [cantidad, setCantidad] = useState(1);
+  const [cantidad, setCantidad] = useState<number | string>(1);
   
   // MODIFICADO: Límite Técnico Nivel 3
   const MAX_CANTIDAD = 1000; 
@@ -35,22 +35,35 @@ function Producto() {
   const [nuevaCalificacion, setNuevaCalificacion] = useState(5);
 
   const handleCantidadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let valor = parseInt(e.target.value);
+    const valorInput = e.target.value;
 
-    if (isNaN(valor)) {
-        setCantidad(1); 
+    // 1. Si el usuario borra todo, dejamos que quede vacío (para que pueda escribir 44 cómodamente)
+    if (valorInput === '') {
+        setCantidad('');
         return;
     }
 
-    // Lógica Clamp Nivel 3: Protección input manual
-    if (valor < 1) valor = 1;
-    if (valor > MAX_CANTIDAD) {
-        valor = MAX_CANTIDAD;
-        // Aviso de Ventas Corporativas
-        showNotification(`Para pedidos sobre ${MAX_CANTIDAD} unidades, contacte a ventas corporativas.`, 'info');
+    const valorNumerico = parseInt(valorInput);
+
+    // 2. Si no es un número válido (ej: signos raros), no hacemos nada
+    if (isNaN(valorNumerico)) return;
+
+    // 3. Validación de Máximo (Anti-Mayorista)
+    if (valorNumerico > 1000) {
+        setCantidad(1000);
+        showNotification('El límite web es de 1000 unidades.', 'warning');
+        return;
     }
 
-    setCantidad(valor);
+    // 4. Permitimos el número tal cual (incluso si es 0 temporalmente, aunque luego lo validaremos)
+    setCantidad(valorNumerico);
+  };
+
+  const handleBlur = () => {
+    // Si dejó el campo vacío o puso 0 o negativo, lo corregimos a 1 automáticamente
+    if (cantidad === '' || cantidad === 0 || Number(cantidad) < 1) {
+        setCantidad(1);
+    }
   };
   
   // ... useEffect, handleThumbnailClick, handleAddToCart se mantienen IGUAL
@@ -96,11 +109,27 @@ function Producto() {
 
   const handleAddToCart = (event: React.FormEvent) => {
     event.preventDefault(); 
+    
+    // CAMBIO 3: Validación final antes de enviar
+    if (cantidad === '' || Number(cantidad) < 1) {
+        showNotification("Debes ingresar una cantidad válida (mínimo 1).", 'danger');
+        setCantidad(1); // Corregimos por él
+        return;
+    }
+
     if (!producto) return;
-    agregarAlCarrito(producto, cantidad, mensaje);
-    showNotification(`¡${cantidad} x ${producto.nombre} añadido(s)!`, 'success');
-    setCantidad(1);
-    setMensaje('');
+
+    const exito = agregarAlCarrito(producto, Number(cantidad), mensaje); // Aseguramos convertir a Number
+    
+    // 3. ¡AQUÍ ES DONDE USAMOS LA VARIABLE! 
+    // Si 'exito' es true, significa que no hubo bloqueo de >1000 items.
+    if (exito) {
+        showNotification(`¡${cantidad} x ${producto.nombre} añadido(s)!`, 'success');
+        
+        // Limpiamos el formulario solo si tuvo éxito
+        setCantidad(1); 
+        setMensaje('');
+    }
   };
 
   const handleShare = (red: 'fb' | 'wa'| 'ig') => {
@@ -198,6 +227,7 @@ function Producto() {
                       type="number" 
                       value={cantidad} 
                       onChange={handleCantidadChange} 
+                      onBlur={handleBlur}
                       min="1" 
                       max={MAX_CANTIDAD} 
                       className="input-quantity"
@@ -208,10 +238,10 @@ function Producto() {
                   </Form.Group>
 
                   {/* NUEVO: Alerta Nivel 2 (Mayorista) */}
-                  {cantidad > 20 && (
+                  {Number(cantidad) > 50 && (
                     <Alert variant="warning" className="mb-3 py-2 small border-warning">
                        <i className="fa-solid fa-triangle-exclamation me-2"></i>
-                       <strong>Venta Mayorista:</strong> Pedido sujeto a confirmación de stock y fecha.
+                       <strong>Volumen Alto:</strong> Al pedir más de 50, el pedido pasará a revisión de stock.
                     </Alert>
                   )}
 

@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import { getUsuarioByRun, saveUsuario } from '../services/AdminService';
 import type { IUsuario } from '../services/AdminService';
-import { updateEstadoPedido, getAllPedidos } from '../services/PasteleriaService';
+import { updateEstadoPedido, getPedidosByCliente } from '../services/PasteleriaService';
 import ModalConfirmacion from '../components/ModalConfirmacion';
 import { REGIONES_CHILE } from '../Data/regiones';
 
@@ -38,18 +38,23 @@ function Perfil() {
   const cargarMisPedidos = async () => {
     if (!user) return;
     try {
-      const todosLosPedidos = await getAllPedidos();
-      const mios = todosLosPedidos.filter((p: any) => 
-        p.cliente?.email?.toLowerCase() === user.email.toLowerCase()
-      );
+      // CAMBIO CLAVE: Pedimos directamente los pedidos de este usuario al servidor
+      const mios = await getPedidosByCliente(user.email);      
+      // Ordenamos: el más nuevo primero (ID más alto arriba)
       mios.sort((a, b) => a.id - b.id);
+      
+      // Numeración visual (opcional, igual que antes)
       const miosNumerados = mios.map((pedido, index) => ({
         ...pedido,
         numeroPersonal: index + 1
       }));
+      
+      // Invertimos para ver el último pedido arriba
       setMisPedidos(miosNumerados.reverse());
+    
     } catch (error) {
       console.error("Error cargando historial", error);
+      showNotification('No se pudieron cargar tus pedidos.', 'danger');
     } finally {
       setLoading(false);
     }
@@ -273,7 +278,11 @@ function Perfil() {
                       {misPedidos.map((pedido: any) => (
                         <tr key={pedido.id}>
                           <td className="ps-4 fw-bold text-primary">
-                             #{pedido.numeroPersonal} 
+                            #{pedido.numeroPersonal} 
+                            {/* AGREGADO: ID Real de la base de datos */}
+                            <span className="text-muted fw-normal ms-2" style={{ fontSize: '0.75em' }}>
+                              (codigo: {pedido.id})
+                            </span>
                           </td>
                           <td>
                             <div className="small">{pedido.fechaEmision}</div>

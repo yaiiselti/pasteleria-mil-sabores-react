@@ -28,6 +28,30 @@ function Checkout() {
 
   const [errores, setErrores] = useState<any>({});
 
+
+// Calculamos el total de items manualmente para la validación
+  const totalItems = items.reduce((acc, item) => acc + item.cantidad, 0);
+
+  // Definimos cuántos días bloquear según el tamaño del pedido
+  const getReglasDeTiempo = () => {
+    if (totalItems > 300) return { dias: 25, mesesMax: 12, label: 'Masivo (>300u)' }; // 20 días mín, 1 año máx
+    if (totalItems > 100) return { dias: 15, mesesMax: 6,  label: 'Grande (>100u)' }; // 11 días mín
+    if (totalItems > 50)  return { dias: 7,  mesesMax: 6,  label: 'Mediano (>50u)' }; // 5 días mín
+    return { dias: 2, mesesMax: 6, label: 'Estándar' };       // 48hrs mín
+  };
+
+  const reglas = getReglasDeTiempo();
+
+  // Función auxiliar para calcular fechas límite en formato YYYY-MM-DD
+  const calcularFechaLimite = (diasSumar: number) => {
+    const fecha = new Date();
+    fecha.setDate(fecha.getDate() + diasSumar);
+    return fecha.toISOString().split('T')[0];
+  };
+
+  const fechaMinimaInput = calcularFechaLimite(reglas.dias);
+  const fechaMaximaInput = calcularFechaLimite(reglas.mesesMax * 30);
+
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -68,10 +92,15 @@ function Checkout() {
   const validarFecha = (fechaStr: string) => {
     if (!fechaStr) return false;
     const hoy = new Date();
-    const seleccionada = new Date(fechaStr);
+    // Ajustamos horas a 0 para comparar solo fechas calendario
+    hoy.setHours(0,0,0,0);
+    
+    const seleccionada = new Date(fechaStr + 'T00:00:00'); // Forzamos hora local
     const diferenciaTiempo = seleccionada.getTime() - hoy.getTime();
     const diasDiferencia = diferenciaTiempo / (1000 * 3600 * 24);
-    return diasDiferencia >= 2; 
+    
+    // Aquí usamos la regla dinámica en lugar del "2" fijo
+    return diasDiferencia >= reglas.dias; 
   };
 
   const validar = () => {
@@ -87,7 +116,7 @@ function Checkout() {
         nuevosErrores.fechaEntrega = 'Debes elegir una fecha.';
         esValido = false;
     } else if (!validarFecha(formData.fechaEntrega)) {
-        nuevosErrores.fechaEntrega = 'Los pedidos deben hacerse con 48hrs de anticipación.';
+        nuevosErrores.fechaEntrega = `Por el volumen (${totalItems} u.), necesitamos ${reglas.dias} días de preparación.`;
         esValido = false;
     }
 
@@ -140,13 +169,15 @@ function Checkout() {
         fechaEmision: ahora.toLocaleDateString(),
         horaEmision: ahora.toLocaleTimeString(), 
         fechaEntrega: formData.fechaEntrega,     
-        cliente: formData,
+        cliente: {
+            ...formData,
+            codigoPromo: user?.codigoPromo || '' 
+        },
         productos: items,
         subtotal: subtotal,
         descuento: descuentoTotal,
         total: totalPrecio,
         
-        // --- CORRECCIÓN CRÍTICA DE SEGURIDAD ---
         // Enviamos estado vacío para que el Backend decida si es Pendiente o Mayorista
         // Si enviamos 'Pendiente' aquí, podríamos sobrescribir la lógica de seguridad.
         estado: '' 
@@ -175,6 +206,8 @@ function Checkout() {
       </Container>
     );
   }
+
+  
 
   return (
     <Container className="py-5">
@@ -237,14 +270,41 @@ function Checkout() {
                   </Col>
 
                   <Col md={12}>
+                    {/* ALERTA ESPECIAL PARA PEDIDOS MASIVOS */}
+                    {totalItems > 300 && (
+                      <Alert variant="info" className="d-flex align-items-center mb-2 py-2 small border-info">
+                         <i className="fa-solid fa-calendar-clock me-3 fa-lg"></i>
+                         <div>
+                            <strong>Fecha sujeta a confirmación.</strong>
+                            <br/>
+                            Por el volumen del pedido y la fecha seleccionada, sera evaluado el pedido. Te contactaremos para coordinar.
+                         </div>
+                      </Alert>
+                    )}
+
                     <Form.Group controlId="fechaEntrega">
                       <Form.Label>Fecha de Entrega Deseada</Form.Label>
                       <Form.Control 
-                        type="date" name="fechaEntrega" value={formData.fechaEntrega} onChange={handleChange} 
-                        isInvalid={!!errores.fechaEntrega} min={new Date().toISOString().split('T')[0]}
+                        type="date" 
+                        name="fechaEntrega" 
+                        value={formData.fechaEntrega} 
+                        onChange={handleChange} 
+                        isInvalid={!!errores.fechaEntrega} 
+                        // --- CANDADOS HTML ---
+                        min={fechaMinimaInput}
+                        max={fechaMaximaInput}
                       />
                       <Form.Control.Feedback type="invalid">{errores.fechaEntrega}</Form.Control.Feedback>
-                      <Form.Text className="text-muted">Debes pedir con al menos 48 horas de anticipación.</Form.Text>
+                      
+                      {/* TEXTO DE AYUDA DINÁMICO */}
+                      <Form.Text className={totalItems > 50 ? "text-primary fw-bold" : "text-muted"}>
+                        {totalItems > 300 
+                            ? `* Pedido Masivo: Mínimo ${reglas.dias} días de planificación.` 
+                            : totalItems > 50 
+                                ? `* Debido a la cantidad (${totalItems} u.), requerimos ${reglas.dias} días de anticipación.`
+                                : `* Pedido estándar: Mínimo 48 horas de anticipación.`
+                        }
+                      </Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>

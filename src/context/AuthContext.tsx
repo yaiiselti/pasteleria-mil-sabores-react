@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useEffect } from 'react'; // <--- IMPORTANTE: useEffect
+import { createContext, useState, useContext, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8085/api';
@@ -13,8 +13,8 @@ interface UserSession {
   region?: string;
   comuna?: string;
   direccion?: string;
-  fechaNacimiento?: string; // Necesario para calcular edad
-  codigoPromo?: string;     // Necesario para cupón
+  fechaNacimiento?: string;
+  codigoPromo?: string;
 }
 
 interface LoginResponse {
@@ -47,9 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch { return null; }
   });
 
-  // --- FUNCIÓN AUXILIAR: CALCULAR Y GUARDAR BENEFICIOS ---
   const activarBeneficios = (usuario: any) => {
-    // 1. Descuento por Edad (50% si >= 50 años)
     if (usuario.fechaNacimiento) {
       const hoy = new Date();
       const cumple = new Date(usuario.fechaNacimiento);
@@ -58,7 +56,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) {
         edad--;
       }
-
       if (edad >= 50) {
         localStorage.setItem('descuentoEdad', 'true');
       } else {
@@ -66,7 +63,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // 2. Descuento por Código
     if (usuario.codigoPromo && usuario.codigoPromo.trim().toUpperCase() === 'FELICES50') {
       localStorage.setItem('descuentoCodigo', 'true');
     } else {
@@ -84,7 +80,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (response.ok) {
         const data = await response.json();
-        
         const sessionData: UserSession = {
           token: data.token,
           run: data.run,
@@ -95,17 +90,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           region: data.region || '',
           comuna: data.comuna || '',
           direccion: data.direccion || '',
-          fechaNacimiento: data.fechaNacimiento, // Importante
-          codigoPromo: data.codigoPromo          // Importante
+          fechaNacimiento: data.fechaNacimiento,
+          codigoPromo: data.codigoPromo
         };
 
-        // Guardamos sesión
         setUser(sessionData);
         localStorage.setItem('usuarioSesion', JSON.stringify(sessionData));
         localStorage.setItem('token', data.token);
-
-        // --- ¡AQUÍ ESTÁ LA MAGIA! ---
-        // Reactivamos los beneficios automáticamente
         activarBeneficios(data);
 
         return { 
@@ -129,8 +120,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(datos)
       });
-      // Nota: El registro original ya guardaba los beneficios en localStorage, 
-      // así que no necesitamos hacerlo aquí, la vista lo maneja.
       return response.ok;
     } catch { return false; }
   };
@@ -139,11 +128,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     localStorage.removeItem('usuarioSesion');
     localStorage.removeItem('token');
-    // Limpiamos beneficios al salir para seguridad
     localStorage.removeItem('descuentoEdad');
     localStorage.removeItem('descuentoCodigo');
-    
-    // Forzamos redirección visual por si acaso
     window.location.href = '/login';
   };
 
@@ -152,44 +138,73 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const updated = { ...user, ...newData };
       setUser(updated);
       localStorage.setItem('usuarioSesion', JSON.stringify(updated));
-      // Si actualizaron fecha o código, recalculamos beneficios
       activarBeneficios(updated);
     }
   };
 
-  // --- NUEVO: MONITOR DE SESIÓN (Anti-Zombie) ---
+  // --- 1. SINCRONIZADOR DE IDENTIDAD (Anti-Conflicto) ---
+  // Detecta cambios en el token desde otras pestañas.
+  useEffect(() => {
+    const syncSession = (event: StorageEvent) => {
+      if (event.key === 'token') {
+        // Logout en otra pestaña
+        if (event.newValue === null) {
+            setUser(null);
+            window.location.href = '/login';
+        } 
+        // Cambio de usuario en otra pestaña
+        else if (event.newValue !== event.oldValue) {
+            window.location.reload();
+        }
+      }
+    };
+    window.addEventListener('storage', syncSession);
+    return () => window.removeEventListener('storage', syncSession);
+  }, []);
+
+  // --- 2. MONITOR DE SESIÓN (Anti-Zombie) ---
+  // Verifica si el usuario sigue existiendo en la BD al enfocar la ventana.
   useEffect(() => {
     const verificarSesion = async () => {
-      if (!user) return;
+      // 1. SEGURIDAD EXTRA: Si user o user.run son null/undefined, no hacemos nada.
+      // Esto evita que el código explote si el login aún no termina de cargar.
+      if (!user || !user.run) return;
 
       try {
-        // Intentamos consultar algo que requiera auth (como los datos del propio usuario)
-        // Si el usuario fue borrado, esto fallará con 404 o 401
-        const res = await fetch(`${API_URL}/usuarios/${user.run}`, {
-            method: 'GET',
-            headers: { 
-                'Authorization': `Bearer ${user.token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (res.status === 401 || res.status === 403 || res.status === 404) {
-            console.warn("⚠️ Sesión invalidada. Cerrando...");
-            logout();
+    // ELIMINA LA LÍNEA DEL REPLACE. Úsalo directo:
+    const res = await fetch(`${API_URL}/usuarios/${user.run}`, { 
+        method: 'GET',
+        headers: { 
+            'Authorization': `Bearer ${user.token || localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
         }
+    });
+
+        // /// CAMBIO IMPORTANTE: COMENTA EL LOGOUT TEMPORALMENTE
+        // Si hay error, solo avísanos en consola, no cierres la sesión todavía.
+        if (!res.ok) {
+            console.warn(`⚠️ La verificación falló con estado: ${res.status}`);
+              if (res.status === 401 || res.status === 404) {
+              logout();
+                }
+        } else {
+            console.log("✅ Sesión verificada correctamente");
+        }
+
       } catch (error) {
         console.error("Error verificando sesión", error);
       }
     };
 
-    // Verificamos al cargar y al volver a la pestaña
     window.addEventListener('focus', verificarSesion);
-    verificarSesion(); // Check inicial
+    // Agregamos un pequeño delay al inicio para asegurar que el token se guardó bien
+    const timer = setTimeout(() => verificarSesion(), 500);
 
     return () => {
       window.removeEventListener('focus', verificarSesion);
+      clearTimeout(timer);
     };
-  }, [user]); // Dependencia: usuario actual
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, registro, updateUserSession }}>

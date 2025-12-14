@@ -184,7 +184,7 @@ function Confirmacion() {
 
             <Col xs={4}>
                 <div className="recuadro-rut">
-                    <div>R.U.T.: 77.123.456-7</div>
+                    <div>R.U.T.: 22.043.456-7</div>
                     <div className="py-2 fs-5">
                         {esMayorista ? 'SOLICITUD DE PEDIDO' : 'BOLETA ELECTRÓNICA'}
                     </div>
