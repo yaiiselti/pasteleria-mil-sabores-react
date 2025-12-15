@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import ModalConfirmacion from '../components/ModalConfirmacion';
 import type { IItemCarrito } from '../context/CarritoContext';
 import { useNotification } from '../context/NotificationContext';
-
+import { getProductos } from '../services/PasteleriaService';
 
 // --- COMPONENTE AUXILIAR FINAL (Con Alertas Inteligentes) ---
 const InputCantidadCarrito = ({ item, max, onUpdate }: { item: any, max: number, onUpdate: (id: number, val: any) => void }) => {
@@ -107,6 +107,47 @@ function Carrito() {
   const [itemAEditar, setItemAEditar] = useState<IItemCarrito | null>(null);
   const [nuevoMensajeTexto, setNuevoMensajeTexto] = useState('');
 
+
+  useEffect(() => {
+  const validarExistencia = async () => {
+    // 1. Evitamos correr si el carrito está vacío
+    if (items.length === 0) return;
+
+    try {
+      // 2. Pedimos la lista fresca de productos a la base de datos (Backend)
+      const productosReales = await getProductos();
+      
+      const nombresProductosEliminados: string[] = [];
+
+      // 3. Revisamos cada item que tiene el usuario en su carrito local
+      items.forEach(itemLocal => {
+        // Buscamos si existe en la BD y si está ACTIVO
+        const existeYActivo = productosReales.find(
+          p => p.codigo === itemLocal.codigo && p.activo === true
+        );
+        
+        if (!existeYActivo) {
+          // 4. Si el producto ya no existe, lo borramos y guardamos el nombre para el aviso
+          eliminarDelCarrito(itemLocal.idUnico);
+          nombresProductosEliminados.push(itemLocal.nombre);
+        }
+      });
+
+      // 5. Si borramos algo, le avisamos al usuario
+      if (nombresProductosEliminados.length > 0) {
+        showNotification(
+          `Atención: ${nombresProductosEliminados.join(", ")} ya no está disponible y fue removido de tu carrito.`, 
+          'warning'
+        );
+      }
+
+    } catch (error) {
+      console.error("Error al validar el stock en Carrito.tsx:", error);
+      showNotification("Error de conexión al validar productos. Intenta nuevamente.", 'danger');
+    }
+  };
+  validarExistencia();}, [items.length]);
+
   const formatoMoneda = (valor: number | string) => {
     const numero = Number(valor);
     return new Intl.NumberFormat('es-CL', {
@@ -186,6 +227,9 @@ function Carrito() {
 
   // Detectar Nivel 2 (Mayorista) para Alerta Global
   const hayItemsMayoristas = items.reduce((acc, item) => acc + item.cantidad, 0) > 50;
+
+
+  
 
   return (
     <Container className="py-5">

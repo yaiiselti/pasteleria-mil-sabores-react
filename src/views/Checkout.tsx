@@ -9,7 +9,7 @@ import { useNotification } from '../context/NotificationContext';
 
 function Checkout() {
   
-  const { items, totalPrecio, subtotal, descuentoTotal, vaciarCarrito } = useCarrito();
+  const { items, totalPrecio, subtotal, descuentoTotal, vaciarCarrito, eliminarDelCarrito } = useCarrito();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showNotification } = useNotification(); 
@@ -143,20 +143,26 @@ function Checkout() {
     e.preventDefault();
     
     if (validar()) {
-      
-      // --- VALIDACIÓN DE DISPONIBILIDAD ---
-      try {
-        const productosActuales = await getProductos();
-        const productosConflictivos = items.filter(itemCarrito => {
-            const productoReal = productosActuales.find(p => p.codigo === itemCarrito.codigo);
-            return !productoReal || productoReal.activo === false;
-        });
+  try {
+    const productosActuales = await getProductos();
+    
+    // Filtramos los productos que ya NO existen en la BD o están inactivos
+    const productosConflictivos = items.filter(itemCarrito => {
+        const productoReal = productosActuales.find(p => p.codigo === itemCarrito.codigo);
+        return !productoReal || productoReal.activo === false;
+    });
 
-        if (productosConflictivos.length > 0) {
-            const nombres = productosConflictivos.map(p => p.nombre).join(", ");
-            showNotification(`Lo sentimos, los siguientes productos ya no están disponibles: ${nombres}.`, 'danger');
-            return; 
-        }
+    if (productosConflictivos.length > 0) {
+        const nombres = productosConflictivos.map(p => p.nombre).join(", ");
+        
+        // --- AQUÍ ESTÁ EL TRUCO ---
+        // Recorremos los productos malos y los sacamos del contexto/localStorage uno por uno
+        productosConflictivos.forEach(prodMalo => {
+            eliminarDelCarrito(prodMalo.idUnico);
+        });
+        showNotification(`Hemos eliminado de tu carrito: ${nombres} porque ya no están disponibles.`, 'warning');
+        return;
+      }
       } catch (error) {
         console.error("Error al validar disponibilidad", error);
         showNotification("Error técnico al validar el pedido.", 'danger');
