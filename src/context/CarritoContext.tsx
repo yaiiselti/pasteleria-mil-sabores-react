@@ -52,14 +52,14 @@ export const CarritoProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { key, storage } = getStorageConfig(user);
     
-    // A) Carga inicial (Mantener lógica original)
+    //  Carga inicial (Mantener lógica original)
     try {
       const guardado = storage.getItem(key);
       if (guardado) setItems(JSON.parse(guardado));
       else setItems([]); 
     } catch { setItems([]); }
 
-    // B) NUEVO: Escuchar cambios desde otras pestañas
+    //  Escuchar cambios desde otras pestañas
     const syncPestanas = (event: StorageEvent) => {
       // Solo reaccionamos si cambiaron MI carrito específico
       if (event.key === key) {
