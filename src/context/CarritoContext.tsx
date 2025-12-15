@@ -48,14 +48,35 @@ export const CarritoProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  // 1. Efecto para CAMBIAR de usuario
+  // 1. Efecto para CAMBIAR de usuario Y SINCRONIZAR PESTAÑAS
   useEffect(() => {
     const { key, storage } = getStorageConfig(user);
+    
+    // A) Carga inicial (Mantener lógica original)
     try {
       const guardado = storage.getItem(key);
       if (guardado) setItems(JSON.parse(guardado));
       else setItems([]); 
     } catch { setItems([]); }
+
+    // B) NUEVO: Escuchar cambios desde otras pestañas
+    const syncPestanas = (event: StorageEvent) => {
+      // Solo reaccionamos si cambiaron MI carrito específico
+      if (event.key === key) {
+         if (event.newValue) {
+           setItems(JSON.parse(event.newValue)); // Actualizar al instante
+         } else {
+           setItems([]); // Si se borró en otro lado
+         }
+      }
+    };
+
+    // Activamos el "oído" del navegador
+    window.addEventListener('storage', syncPestanas);
+    
+    // Limpieza: dejamos de escuchar al cambiar de usuario o cerrar componente
+    return () => window.removeEventListener('storage', syncPestanas);
+
   }, [user]);
 
   // 2. Efecto para GUARDAR
